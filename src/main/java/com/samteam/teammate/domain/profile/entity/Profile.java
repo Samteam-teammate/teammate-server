@@ -1,6 +1,6 @@
 package com.samteam.teammate.domain.profile.entity;
 
-import com.samteam.teammate.domain.member.dto.ProfileUpdateRequest;
+import com.samteam.teammate.domain.member.dto.MemberProfileUpdateRequest;
 import com.samteam.teammate.domain.member.entity.Member;
 import com.samteam.teammate.global.util.BaseTimeEntity;
 import com.samteam.teammate.global.enums.FieldType;
@@ -63,7 +63,7 @@ public class Profile extends BaseTimeEntity {
 	@Column(name = "visibility", nullable = false)
 	private Boolean visibility;
 
-	public void update(ProfileUpdateRequest dto) {
+	public void update(MemberProfileUpdateRequest dto) {
 		if (dto.name() != null) {
 			this.name = dto.name();
 		}

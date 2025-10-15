@@ -2,15 +2,16 @@ package com.samteam.teammate.domain.member.controller;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.samteam.teammate.domain.member.dto.ProfileUpdateRequest;
+import com.samteam.teammate.domain.member.dto.MemberProfileResponse;
+import com.samteam.teammate.domain.member.dto.MemberProfileUpdateRequest;
 import com.samteam.teammate.domain.member.provider.AuthTokenProvider;
 import com.samteam.teammate.domain.member.service.MemberService;
-import com.samteam.teammate.domain.profile.dto.ProfileResponse;
 
 import io.jsonwebtoken.JwtException;
 import io.swagger.v3.oas.annotations.Operation;
@@ -26,13 +27,19 @@ public class MemberController {
 	// 본인 프로필 수정/조회만
 	private final MemberService memberService;
 
+	@Operation(summary = "본인 프로필 조회")
+	@GetMapping()
+	public ResponseEntity<MemberProfileResponse> getProfile(HttpServletRequest request) {
+		return ResponseEntity.ok(memberService.getProfile(getCurrentMember(request)));
+	}
+
 	@Operation(summary = "본인 프로필 수정")
 	@PatchMapping()
-	public ResponseEntity<ProfileResponse> updateProfile(
+	public ResponseEntity<MemberProfileResponse> updateProfile(
 		HttpServletRequest request, // 임시
-		@RequestBody ProfileUpdateRequest profileUpdateRequest) {
+		@RequestBody MemberProfileUpdateRequest memberProfileUpdateRequest) {
 
-		ProfileResponse response = memberService.updateProfile(getCurrentMember(request), profileUpdateRequest);
+		MemberProfileResponse response = memberService.updateProfile(getCurrentMember(request), memberProfileUpdateRequest);
 
 		return ResponseEntity.ok(response);
 	}
