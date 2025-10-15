@@ -27,7 +27,7 @@ public class Member extends BaseTimeEntity {
 	@Column(name = "member_id")
 	private Long id;
 
-	private Long student_id;
+	private Long studentId;
 
 	private String password;
 }
