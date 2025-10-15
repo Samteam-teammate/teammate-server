@@ -6,7 +6,6 @@ import javax.crypto.SecretKey;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 
@@ -51,7 +50,7 @@ public class AuthTokenProvider {
 			.compact();
 	}
 
-	/*public boolean isValidToken(String token) {
+	public boolean isValidToken(String token) {
 		try {
 			SecretKey secretKey = Keys.hmacShaKeyFor(secret.getBytes());
 
@@ -70,7 +69,7 @@ public class AuthTokenProvider {
 
 	}
 
-	public Map<String, Object> verifyToken(String token) {
+	/*public Map<String, Object> verifyToken(String token) {
 		try {
 			SecretKey secretKey = Keys.hmacShaKeyFor(secret.getBytes());
 			Claims claims = Jwts.parser()
@@ -83,4 +82,14 @@ public class AuthTokenProvider {
 			return null;
 		}
 	}*/
+
+	public String getSubject(String token) {
+		SecretKey secretKey = Keys.hmacShaKeyFor(secret.getBytes());
+		return Jwts.parser()
+			.verifyWith(secretKey)
+			.build()
+			.parseSignedClaims(token)
+			.getPayload()
+			.getSubject();
+	}
 }

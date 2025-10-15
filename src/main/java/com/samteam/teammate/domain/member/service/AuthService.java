@@ -1,7 +1,5 @@
 package com.samteam.teammate.domain.member.service;
 
-import java.util.Optional;
-
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -21,24 +19,18 @@ public class AuthService {
 	private final PasswordEncoder passwordEncoder;
 
 	public MemberLoginResponse login(Long studentId, String password) {
-		Optional<Member> optionalMember = memberRepository.findByStudentId(studentId);
-		Member member =  validateUser(password, optionalMember);
+		Member member = memberRepository.findByStudentId(studentId)
+			.orElseThrow(() -> new RuntimeException("회원가입이 필요합니다"));
+
+		validateUser(password, member);
 
 		return MemberLoginResponse.from(member);
 	}
 
-	private Member validateUser(String password, Optional<Member> optionalMember) {
-
-		if (optionalMember.isEmpty()) {
-			throw new RuntimeException("회원가입이 필요합니다");
-		}
-		Member member = optionalMember.get();
-
+	private void validateUser(String password, Member member) {
 		if (!passwordEncoder.matches(password, member.getPassword())) {
 			throw new RuntimeException("비밀번호가 일치하지 않습니다");
 		}
-
-		return member;
 	}
 
 	public String genAccessToken(MemberLoginResponse memberResponse) {

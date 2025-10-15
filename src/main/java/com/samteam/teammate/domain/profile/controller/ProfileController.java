@@ -27,7 +27,7 @@ public class ProfileController {
 	private final ProfileService profileService;
 
 	@Operation(summary = "전체 프로필 조회")
-	@GetMapping("/")
+	@GetMapping()
 	public ResponseEntity<Page<ProfileResponse>> getAllVisibleProfiles(
 		@RequestParam(value = "major", required = false) Major major,
 		@RequestParam(value = "field", required = false) FieldType field,
