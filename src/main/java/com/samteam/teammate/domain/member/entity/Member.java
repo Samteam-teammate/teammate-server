@@ -1,6 +1,6 @@
 package com.samteam.teammate.domain.member.entity;
 
-import com.samteam.teammate.global.BaseTimeEntity;
+import com.samteam.teammate.global.util.BaseTimeEntity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

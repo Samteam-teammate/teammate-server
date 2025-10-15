@@ -1,4 +1,4 @@
-package com.samteam.teammate.domain.profile.entity;
+package com.samteam.teammate.global.enums;
 
 public enum FieldType {
 	// TODO: 분야 정립 필요

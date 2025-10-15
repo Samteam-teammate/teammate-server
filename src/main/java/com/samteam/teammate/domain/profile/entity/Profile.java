@@ -1,7 +1,9 @@
 package com.samteam.teammate.domain.profile.entity;
 
 import com.samteam.teammate.domain.member.entity.Member;
-import com.samteam.teammate.global.BaseTimeEntity;
+import com.samteam.teammate.global.util.BaseTimeEntity;
+import com.samteam.teammate.global.enums.FieldType;
+import com.samteam.teammate.global.enums.Major;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

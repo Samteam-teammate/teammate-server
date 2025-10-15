@@ -1,4 +1,4 @@
-package com.samteam.teammate.global;
+package com.samteam.teammate.global.util;
 
 import java.time.LocalDateTime;
 
