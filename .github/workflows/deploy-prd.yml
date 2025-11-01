@@ -11,6 +11,10 @@ on:
     branches:
       - main
 
+permissions:
+  contents: write
+  id-token: write
+
 jobs:
   call-deploy:
     uses: ./.github/workflows/deploy-common.yml
