@@ -56,7 +56,7 @@ jobs:
       - name: GCE 인스턴스 이름 및 Zone 가져오기
         id: get_instance_info
         run: |
-          # 1. 인스턴스 이름 규칙 설정: teammate-server-[dev/prod]
+          # 1. 인스턴스 이름 규칙 설정: teammate-server-[dev/prd]
           TARGET_NAME="teammate-server-${{ inputs.instance_env }}"
           
           # 2. gcloud CLI를 사용하여 인스턴스 정보 조회 및 필터링
@@ -145,8 +145,8 @@ jobs:
       - name: 빌드 앤 푸시
         uses: docker/build-push-action@v3
         with:
-          context: backend
-          file: backend/${{ inputs.dockerfile }}
+          context: .
+          file: ${{ inputs.dockerfile }}
           push: true
           cache-from: type=registry,ref=ghcr.io/${{ steps.export_owner.outputs.owner_lc }}/${{ steps.export_image.outputs.image_name }}:cache
           cache-to: type=registry,ref=ghcr.io/${{ steps.export_owner.outputs.owner_lc }}/${{ steps.export_image.outputs.image_name }}:cache,mode=max
