@@ -1,0 +1,187 @@
+name: "deploy-common"
+
+on:
+  workflow_call:
+    inputs:
+      branch:
+        type: string
+      branch_upper:
+        type: string
+      tag_prefix:
+        type: string
+      dockerfile:
+        type: string
+      instance_env:
+        type: string
+
+    secrets:
+      GCP_SERVICE_ACCOUNT_KEY:
+        required: true
+      GCP_PROJECT_ID:
+        required: true
+      GCP_ZONE:
+        required: true
+      TK_GITHUB_ACCESS_TOKEN:
+        required: true
+      TK_GITHUB_ACCESS_TOKEN_OWNER:
+        required: true
+
+jobs:
+  # 1. 인스턴스 접속 정보 (EC2 ID -> GCE 이름, Zone)
+  get-instance-info:
+    name: Get GCE Instance Info (Name & Zone)
+    runs-on: ubuntu-latest
+    outputs:
+      instance_name: ${{ steps.get_instance_info.outputs.instance_name }}
+      zone: ${{ steps.get_instance_info.outputs.zone }}
+    steps:
+      - name: GCP 서비스 계정 인증
+        # GCP에서 제공하는 공식 GitHub Action 사용
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+
+      - name: GCE 인스턴스 이름 및 Zone 가져오기
+        id: get_instance_info
+        run: |
+          # 1. 인스턴스 이름 규칙 설정: teammate-server-[dev/prod]
+          TARGET_NAME="teammate-server-${{ inputs.instance_env }}"
+          
+          # 2. gcloud CLI를 사용하여 인스턴스 정보 조회 및 필터링
+          # 인스턴스 이름과 상태(RUNNING) 기준으로 조회
+          INSTANCE_DATA=$(gcloud compute instances list \
+            --filter="name=${TARGET_NAME} AND status=RUNNING" \
+            --format="value(name,zone)" \
+            --limit=1 \
+            --project=${{ inputs.GCP_PROJECT_ID }})
+          
+          # 3. 조회 결과 파싱
+          if [ -z "$INSTANCE_DATA" ]; then
+            echo "오류: RUNNING 상태의 GCE 인스턴스 '${TARGET_NAME}'를 찾을 수 없습니다."
+            exit 1
+          fi
+          
+          # 결과는 "인스턴스이름  zone/존이름" 형태로 나옴 (공백으로 구분)
+          INSTANCE_NAME=$(echo $INSTANCE_DATA | awk '{print $1}')
+          # Zone 정보는 URL 형태로 나오므로, 존 이름만 추출
+          INSTANCE_ZONE=$(echo $INSTANCE_DATA | awk -F'/' '{print $NF}')
+          
+          echo "instance_name=$INSTANCE_NAME" >> $GITHUB_OUTPUT
+          echo "zone=$INSTANCE_ZONE" >> $GITHUB_OUTPUT
+          echo "GCE 인스턴스: $INSTANCE_NAME, Zone: $INSTANCE_ZONE"
+
+  # 2. 태그 및 릴리스 생성 (단순한 파이프라인을 위해 GHCR 사용)
+  makeTagAndRelease:
+    name: Create Tag & Release (${{ inputs.branch }})
+    runs-on: ubuntu-latest
+    outputs:
+      tag_name: ${{ steps.create_tag.outputs.new_tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create Tag
+        id: create_tag
+        uses: mathieudutour/github-tag-action@v6.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          tag_prefix: ${{ inputs.tag_prefix }}
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.create_tag.outputs.new_tag }}
+          release_name: "${{ inputs.branch_upper }} Release ${{ steps.create_tag.outputs.new_tag }}"
+          body: ${{ steps.create_tag.outputs.changelog }}
+          draft: false
+          prerelease: false
+
+  # 3. 도커 이미지 빌드 및 푸시 (GitHub Container Registry)
+  buildImageAndPush:
+    name: 도커 이미지 빌드와 푸시 (${{ inputs.branch }})
+    needs: makeTagAndRelease
+    runs-on: ubuntu-latest
+    outputs:
+      owner_lc: ${{ steps.export_owner.outputs.owner_lc }}
+      image_name: ${{ steps.export_image.outputs.image_name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Docker Buildx 설치
+        uses: docker/setup-buildx-action@v2
+
+      - name: 레지스트리 로그인
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: set lower case owner name
+        id: export_owner
+        run: |
+          OWNER_LC="${GITHUB_REPOSITORY_OWNER,,}"
+          echo "owner_lc=$OWNER_LC" >> $GITHUB_OUTPUT
+
+      - name: export image name
+        id: export_image
+        run: |
+          echo "image_name=samteam-teammate-${{ inputs.branch }}" >> $GITHUB_OUTPUT
+
+      - name: 빌드 앤 푸시
+        uses: docker/build-push-action@v3
+        with:
+          context: backend
+          file: backend/${{ inputs.dockerfile }}
+          push: true
+          cache-from: type=registry,ref=ghcr.io/${{ steps.export_owner.outputs.owner_lc }}/${{ steps.export_image.outputs.image_name }}:cache
+          cache-to: type=registry,ref=ghcr.io/${{ steps.export_owner.outputs.owner_lc }}/${{ steps.export_image.outputs.image_name }}:cache,mode=max
+          tags: |
+            ghcr.io/${{ steps.export_owner.outputs.owner_lc }}/${{ steps.export_image.outputs.image_name }}:${{ needs.makeTagAndRelease.outputs.tag_name }},
+            ghcr.io/${{ steps.export_owner.outputs.owner_lc }}/${{ steps.export_image.outputs.image_name }}:latest
+
+  # 4. 인스턴스에 배포
+  deploy:
+    name: GCE에 배포 (${{ inputs.branch }})
+    runs-on: ubuntu-latest
+    needs: [buildImageAndPush, get-instance-id]
+    steps:
+      - name: GCP CLI 및 SSH 설정
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          service_account_key: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+          project_id: ${{ inputs.GCP_PROJECT_ID }}
+
+      - name: GCE SSH로 배포
+        run:
+          INSTANCE_NAME=${{ needs.get-instance-info.outputs.instance_name }}
+          INSTANCE_ZONE=${{ needs.get-instance-info.outputs.zone }}
+        
+          gcloud compute ssh "${INSTANCE_NAME}" \
+            --zone "$INSTANCE_ZONE}" \
+            --project "${{ inputs.GCP_PROJECT_ID }}" \
+            --command "
+              # 실패시 중지
+              set -e
+          
+              # GHCR 로그인
+              echo '${{ secrets.TK_GITHUB_ACCESS_TOKEN }}' \
+                | docker login ghcr.io \
+                    -u ${{ secrets.TK_GITHUB_ACCESS_TOKEN_OWNER }} \
+                    --password-stdin
+          
+              # 이미지 Pull, 컨테이너 중지/제거, 새 컨테이너 실행
+              docker pull ghcr.io/${{ needs.buildImageAndPush.outputs.owner_lc }}/${{ needs.buildImageAndPush.outputs.image_name }}:latest && \
+              docker stop app1 2>/dev/null || true && \
+              docker rm app1 2>/dev/null || true && \
+              docker run --restart always \
+                -e TZ=UTC \
+                -d --name app1 -p 8080:8080 --network common \
+                -v /dockerProjects/logs:/app/logs \
+                ghcr.io/${{ needs.buildImageAndPush.outputs.owner_lc }}/${{ needs.buildImageAndPush.outputs.image_name }}:latest
+                
+              # Dangling 이미지 정리
+              docker rmi \$(docker images -f \"dangling=true\" -q) || true
+            "
