@@ -65,7 +65,7 @@ jobs:
             --filter="name=${TARGET_NAME} AND status=RUNNING" \
             --format="value(name,zone)" \
             --limit=1 \
-            --project=${{ inputs.GCP_PROJECT_ID }})
+            --project=${{ secrets.GCP_PROJECT_ID }})
           
           # 3. 조회 결과 파싱
           if [ -z "$INSTANCE_DATA" ]; then
@@ -164,7 +164,7 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
         with:
           service_account_key: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
-          project_id: ${{ inputs.GCP_PROJECT_ID }}
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
 
       - name: GCE SSH로 배포
         run: |
@@ -173,7 +173,7 @@ jobs:
         
           gcloud compute ssh "${INSTANCE_NAME}" \
             --zone "${INSTANCE_ZONE}" \
-            --project "${{ inputs.GCP_PROJECT_ID }}" \
+            --project "${{ secrets.GCP_PROJECT_ID }}" \
             --command "
               # 실패시 중지
               set -e
