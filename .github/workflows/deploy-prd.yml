@@ -22,7 +22,8 @@ jobs:
       instance_env: prd
     secrets:
       ENV_CONTENT: ${{ secrets.ENV_CONTENT }}
-      MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+      DB_NETWORK_NAME: ${{ secrets.DB_NETWORK_NAME }}
+      DB_ROOT_PASSWORD: ${{ secrets.DB_ROOT_PASSWORD }}
       DB_HOST: ${{ secrets.DB_HOST }}
       DB_PORT: ${{ secrets.DB_PORT }}
       DB_NAME: ${{ secrets.DB_NAME }}

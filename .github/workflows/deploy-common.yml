@@ -19,7 +19,7 @@ on:
         required: true
       DB_NETWORK_NAME:
         required: true
-      MYSQL_ROOT_PASSWORD:
+      DB_ROOT_PASSWORD:
         required: true
       DB_HOST:
         required: true
