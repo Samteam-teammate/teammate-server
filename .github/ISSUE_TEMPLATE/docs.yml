@@ -1,0 +1,20 @@
+name: " 📄 docs"
+description: "문서 수정"
+labels: ["docs"]
+body:
+  - type: textarea
+    attributes:
+      label: 📄 설명
+      description: 작성한 문서에 대한 설명을 작성해 주세요.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: ✅ 문서 목록
+      description: 생성 혹은 수정할 문서를 체크박스 형태로 작성해주세요.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: 💡 참고 자료
+      description: 참고 자료가 있다면 작성해 주세요.
