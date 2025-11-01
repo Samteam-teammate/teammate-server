@@ -15,6 +15,18 @@ on:
         type: string
 
     secrets:
+      ENV_CONTENT:
+        required: true
+      DB_NETWORK_NAME:
+        required: true
+      MYSQL_ROOT_PASSWORD:
+        required: true
+      DB_HOST:
+        required: true
+      DB_PORT:
+        required: true
+      DB_NAME:
+        required: true
       GCP_SERVICE_ACCOUNT_KEY:
         required: true
       GCP_PROJECT_ID:
@@ -146,7 +158,7 @@ jobs:
   deploy:
     name: GCE에 배포 (${{ inputs.branch }})
     runs-on: ubuntu-latest
-    needs: [buildImageAndPush, get-instance-id]
+    needs: [buildImageAndPush, get-instance-info]
     steps:
       - name: GCP CLI 및 SSH 설정
         uses: google-github-actions/setup-gcloud@v2
@@ -155,12 +167,12 @@ jobs:
           project_id: ${{ inputs.GCP_PROJECT_ID }}
 
       - name: GCE SSH로 배포
-        run:
+        run: |
           INSTANCE_NAME=${{ needs.get-instance-info.outputs.instance_name }}
           INSTANCE_ZONE=${{ needs.get-instance-info.outputs.zone }}
         
           gcloud compute ssh "${INSTANCE_NAME}" \
-            --zone "$INSTANCE_ZONE}" \
+            --zone "${INSTANCE_ZONE}" \
             --project "${{ inputs.GCP_PROJECT_ID }}" \
             --command "
               # 실패시 중지
@@ -172,13 +184,37 @@ jobs:
                     -u ${{ secrets.TK_GITHUB_ACCESS_TOKEN_OWNER }} \
                     --password-stdin
           
+              # env 파일 저장
+              echo '${{ secrets.ENV_CONTENT }}' > /app/.env
+          
+              # db container 실행
+              NETWORK_NAME=${{ secrets.DB_NETWORK_NAME }}
+              DB_HOST=${{ secrets.DB_HOST }}
+              DB_PORT=${{ secrets.DB_PORT }}
+              DB_NAME=${{ secrets.DB_NAME }}
+              docker network create ${NETWORK_NAME} 2>/dev/null || true
+              docker stop ${DB_HOST} 2>/dev/null || true
+              docker rm ${DB_HOST} 2>/dev/null || true
+              docker run -d --name ${DB_HOST} \
+                --restart always \
+                --network ${NETWORK_NAME} \
+                -p ${DB_PORT}:${DB_PORT} \
+                -e MYSQL_ROOT_PASSWORD='${{ secrets.MYSQL_ROOT_PASSWORD }}' \
+                -e MYSQL_DATABASE='${{ secrets.DB_NAME }}' \
+                # 사용자 설정 필요
+                -v mysql_data:/var/lib/mysql \
+              mysql:8.0
+              sleep 10
+          
               # 이미지 Pull, 컨테이너 중지/제거, 새 컨테이너 실행
               docker pull ghcr.io/${{ needs.buildImageAndPush.outputs.owner_lc }}/${{ needs.buildImageAndPush.outputs.image_name }}:latest && \
               docker stop app1 2>/dev/null || true && \
               docker rm app1 2>/dev/null || true && \
               docker run --restart always \
                 -e TZ=UTC \
-                -d --name app1 -p 8080:8080 --network common \
+                --env-file /app/.env \
+                --network ${NETWORK_NAME} \
+                -d --name app1 -p 8080:8080 \
                 -v /dockerProjects/logs:/app/logs \
                 ghcr.io/${{ needs.buildImageAndPush.outputs.owner_lc }}/${{ needs.buildImageAndPush.outputs.image_name }}:latest
                 

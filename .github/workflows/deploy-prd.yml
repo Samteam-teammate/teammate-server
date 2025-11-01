@@ -21,6 +21,11 @@ jobs:
       dockerfile: Dockerfile.prd
       instance_env: prd
     secrets:
+      ENV_CONTENT: ${{ secrets.ENV_CONTENT }}
+      MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+      DB_HOST: ${{ secrets.DB_HOST }}
+      DB_PORT: ${{ secrets.DB_PORT }}
+      DB_NAME: ${{ secrets.DB_NAME }}
       GCP_SERVICE_ACCOUNT_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
       GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
       GCP_ZONE: ${{ secrets.GCP_ZONE }}
