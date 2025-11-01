@@ -182,6 +182,7 @@ jobs:
               set -e
           
               sudo mkdir -p /app
+              sudo chown -R $USER:$USER /app
           
               # GHCR 로그인
               echo '${{ secrets.TK_GITHUB_ACCESS_TOKEN }}' \
