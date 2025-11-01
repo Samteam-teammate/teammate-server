@@ -73,14 +73,20 @@ jobs:
             exit 1
           fi
           
-          # 결과는 "인스턴스이름  zone/존이름" 형태로 나옴 (공백으로 구분)
-          INSTANCE_NAME=$(echo $INSTANCE_DATA | awk '{print $1}')
-          # Zone 정보는 URL 형태로 나오므로, 존 이름만 추출
-          INSTANCE_ZONE=$(echo $INSTANCE_DATA | awk -F'/' '{print $NF}')
           
+          INSTANCE_NAME=$(echo "$INSTANCE_DATA" | awk '{print $1}')
+          INSTANCE_ZONE_URL=$(echo "$INSTANCE_DATA" | awk '{print $2}')
+          
+          # zone URL에서 마지막만 추출
+          INSTANCE_ZONE=$(basename "$INSTANCE_ZONE_URL")
+          
+          # GitHub Actions output으로 내보내기
           echo "instance_name=$INSTANCE_NAME" >> $GITHUB_OUTPUT
           echo "zone=$INSTANCE_ZONE" >> $GITHUB_OUTPUT
-          echo "GCE 인스턴스: $INSTANCE_NAME, Zone: $INSTANCE_ZONE"
+
+          echo "GCE 인스턴스: $INSTANCE_NAME"
+          echo "Zone: $INSTANCE_ZONE"
+
 
   # 2. 태그 및 릴리스 생성 (단순한 파이프라인을 위해 GHCR 사용)
   makeTagAndRelease:
