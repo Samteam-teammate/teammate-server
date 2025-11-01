@@ -171,7 +171,7 @@ jobs:
           INSTANCE_NAME=${{ needs.get-instance-info.outputs.instance_name }}
           INSTANCE_ZONE=${{ needs.get-instance-info.outputs.zone }}
           
-          echo "${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}" > /tmp/key.json
+          echo "${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}" | base64 -d > /tmp/key.json
           gcloud auth activate-service-account --key-file=/tmp/key.json --project=${{ secrets.GCP_PROJECT_ID }}
         
           gcloud compute ssh "${INSTANCE_NAME}" \
