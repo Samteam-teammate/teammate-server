@@ -181,6 +181,8 @@ jobs:
               # 실패시 중지
               set -e
           
+              mkdir -p /app
+          
               # GHCR 로그인
               echo '${{ secrets.TK_GITHUB_ACCESS_TOKEN }}' \
                 | docker login ghcr.io \
