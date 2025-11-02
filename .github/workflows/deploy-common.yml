@@ -170,6 +170,7 @@ jobs:
         run: |
           INSTANCE_NAME=${{ needs.get-instance-info.outputs.instance_name }}
           INSTANCE_ZONE=${{ needs.get-instance-info.outputs.zone }}
+          APP_IMAGE_PATH=ghcr.io/${{ needs.buildImageAndPush.outputs.owner_lc }}/${{ needs.buildImageAndPush.outputs.image_name }}
           
           echo "${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}" | base64 -d > /tmp/key.json
           gcloud auth activate-service-account --key-file=/tmp/key.json --project=${{ secrets.GCP_PROJECT_ID }}
@@ -213,7 +214,6 @@ jobs:
               sudo sleep 10
           
               # 이미지 Pull, 컨테이너 중지/제거, 새 컨테이너 실행
-              APP_IMAGE_PATH=ghcr.io/${{ needs.buildImageAndPush.outputs.owner_lc }}/${{ needs.buildImageAndPush.outputs.image_name }}
               sudo docker pull ${APP_IMAGE_PATH}:latest && \
               sudo docker stop app1 2>/dev/null || true && \
               sudo docker rm app1 2>/dev/null || true && \
