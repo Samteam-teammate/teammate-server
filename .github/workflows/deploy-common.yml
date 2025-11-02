@@ -179,6 +179,7 @@ jobs:
             --zone "${INSTANCE_ZONE}" \
             --project "${{ secrets.GCP_PROJECT_ID }}" \
             --command "
+              APP_IMAGE_PATH='${APP_IMAGE_PATH}'
               # 실패시 중지
               set -e
           
