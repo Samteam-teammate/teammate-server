@@ -9,7 +9,7 @@ on:
       - "settings.gradle"
       - "Dockerfile.prd"
     branches:
-      - main
+      - deploy
 
 permissions:
   contents: write
