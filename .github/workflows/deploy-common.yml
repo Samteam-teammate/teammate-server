@@ -207,7 +207,7 @@ jobs:
                 --restart always \
                 --network ${NETWORK_NAME} \
                 -p ${DB_PORT}:${DB_PORT} \
-                -e MYSQL_ROOT_PASSWORD='${{ secrets.MYSQL_ROOT_PASSWORD }}' \
+                -e MYSQL_ROOT_PASSWORD='${{ secrets.DB_ROOT_PASSWORD }}' \
                 -e MYSQL_DATABASE='${{ secrets.DB_NAME }}' \
                 # 사용자 설정 필요
                 -v mysql_data:/var/lib/mysql \
