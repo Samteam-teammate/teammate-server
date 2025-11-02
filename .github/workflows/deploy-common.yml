@@ -214,7 +214,7 @@ jobs:
           
               # 이미지 Pull, 컨테이너 중지/제거, 새 컨테이너 실행
               APP_IMAGE_PATH=ghcr.io/${{ needs.buildImageAndPush.outputs.owner_lc }}/${{ needs.buildImageAndPush.outputs.image_name }}
-              sudo docker pull APP_IMAGE_PATH:latest && \
+              sudo docker pull ${APP_IMAGE_PATH}:latest && \
               sudo docker stop app1 2>/dev/null || true && \
               sudo docker rm app1 2>/dev/null || true && \
               sudo docker run --restart always \
@@ -223,7 +223,7 @@ jobs:
                 --network ${NETWORK_NAME} \
                 -d --name app1 -p 8080:8080 \
                 -v /dockerProjects/logs:/app/logs \
-                APP_IMAGE_PATH:latest
+                ${APP_IMAGE_PATH}:latest
                 
               # Dangling 이미지 정리
               sudo docker rmi \$(docker images -f \"dangling=true\" -q) || true
