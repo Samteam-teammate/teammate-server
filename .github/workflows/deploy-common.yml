@@ -170,62 +170,50 @@ jobs:
         run: |
           INSTANCE_NAME=${{ needs.get-instance-info.outputs.instance_name }}
           INSTANCE_ZONE=${{ needs.get-instance-info.outputs.zone }}
+          APP_IMAGE_PATH="ghcr.io/${{ needs.buildImageAndPush.outputs.owner_lc }}/${{ needs.buildImageAndPush.outputs.image_name }}"
+          
+          echo "---DEBUG: APP_IMAGE_PATH (GH Actions)='${APP_IMAGE_PATH}'---"
           
           echo "${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}" | base64 -d > /tmp/key.json
           gcloud auth activate-service-account --key-file=/tmp/key.json --project=${{ secrets.GCP_PROJECT_ID }}
-        
+          
           gcloud compute ssh "${INSTANCE_NAME}" \
             --zone "${INSTANCE_ZONE}" \
             --project "${{ secrets.GCP_PROJECT_ID }}" \
             --command "
-              # 실패시 중지
+              APP_IMAGE_PATH_RAW=\"${APP_IMAGE_PATH}\"
+              APP_NAME_TAG=\"\${APP_IMAGE_PATH_RAW}:latest\"
               set -e
+              NETWORK_NAME_RAW=\"${{ secrets.DB_NETWORK_NAME }}\"
+              DB_HOST_RAW=\"${{ secrets.DB_HOST }}\"
+              DB_PORT_RAW=\"${{ secrets.DB_PORT }}\"
+              DB_NAME_RAW=\"${{ secrets.DB_NAME }}\"
           
               sudo mkdir -p /app
-              sudo chown -R $USER:$USER /app
+              sudo chown -R \$USER:\$USER /app
           
-              # GHCR 로그인
-              echo '${{ secrets.TK_GITHUB_ACCESS_TOKEN }}' \
-                | docker login ghcr.io \
-                    -u ${{ secrets.TK_GITHUB_ACCESS_TOKEN_OWNER }} \
-                    --password-stdin
+              # GHCR 로그인: TK_GITHUB_ACCESS_TOKEN_OWNER 대신 github.actor를 사용하도록 수정
+              echo '${{ secrets.TK_GITHUB_ACCESS_TOKEN }}' | sudo docker login ghcr.io -u ${{ github.actor }} --password-stdin
+              
+              echo "${{ secrets.ENV_CONTENT }}" | base64 -d > /app/.env
+  
+              if [ -z \"\${APP_NAME_TAG}\" ]; then
+                echo \"Error: APP_NAME_TAG is not set.\"
+                exit 1
+              fi
           
-              # env 파일 저장
-              echo '${{ secrets.ENV_CONTENT }}' > /app/.env
-          
-              # db container 실행
-              NETWORK_NAME=${{ secrets.DB_NETWORK_NAME }}
-              DB_HOST=${{ secrets.DB_HOST }}
-              DB_PORT=${{ secrets.DB_PORT }}
-              DB_NAME=${{ secrets.DB_NAME }}
-              sudo docker network create ${NETWORK_NAME} 2>/dev/null || true
-              sudo docker stop ${DB_HOST} 2>/dev/null || true
-              sudo docker rm ${DB_HOST} 2>/dev/null || true
-              sudo docker run -d --name ${DB_HOST} \
-                --restart always \
-                --network ${NETWORK_NAME} \
-                -p ${DB_PORT}:${DB_PORT} \
-                -e MYSQL_ROOT_PASSWORD='${{ secrets.MYSQL_ROOT_PASSWORD }}' \
-                -e MYSQL_DATABASE='${{ secrets.DB_NAME }}' \
-                # 사용자 설정 필요
-                -v mysql_data:/var/lib/mysql \
-              mysql:8.0
+              sudo docker network create \${NETWORK_NAME_RAW} 2>/dev/null || true
+              sudo docker stop \${DB_HOST_RAW} 2>/dev/null || true
+              sudo docker rm \${DB_HOST_RAW} 2>/dev/null || true
+              sudo docker run -d --name \${DB_HOST_RAW} --restart=always --network \${NETWORK_NAME_RAW} -p \${DB_PORT_RAW}:\${DB_PORT_RAW} -e MYSQL_ROOT_PASSWORD='${{ secrets.DB_ROOT_PASSWORD }}' -e MYSQL_DATABASE='${{ secrets.DB_NAME }}' -v mysql_data:/var/lib/mysql mysql:8.0
               sudo sleep 10
           
-              # 이미지 Pull, 컨테이너 중지/제거, 새 컨테이너 실행
-              sudo docker pull ghcr.io/${{ needs.buildImageAndPush.outputs.owner_lc }}/${{ needs.buildImageAndPush.outputs.image_name }}:latest && \
+              echo "---APP_IMAGE_TAG=\${APP_NAME_TAG}---"
+          
+              sudo docker pull \${APP_NAME_TAG} && \
               sudo docker stop app1 2>/dev/null || true && \
               sudo docker rm app1 2>/dev/null || true && \
-              sudo docker run --restart always \
-                -e TZ=UTC \
-                --env-file /app/.env \
-                --network ${NETWORK_NAME} \
-                -d --name app1 -p 8080:8080 \
-                -v /dockerProjects/logs:/app/logs \
-                ghcr.io/${{ needs.buildImageAndPush.outputs.owner_lc }}/${{ needs.buildImageAndPush.outputs.image_name }}:latest
-                
-              # Dangling 이미지 정리
-              sudo docker rmi \$(docker images -f \"dangling=true\" -q) || true
-            "
+              sudo docker run --restart=always -e TZ=UTC --env-file=/app/.env --network \${NETWORK_NAME_RAW} -d --name app1 -p 8080:8080 -v /dockerProjects/logs:/app/logs \${APP_NAME_TAG}
           
-          rm /tmp/key.json
+              sudo docker rmi \$(docker images -f 'dangling=true' -q) || true
+            "
