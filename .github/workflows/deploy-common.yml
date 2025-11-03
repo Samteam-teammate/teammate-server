@@ -192,7 +192,8 @@ jobs:
               sudo mkdir -p /app
               sudo chown -R \$USER:\$USER /app
           
-              echo '${{ secrets.TK_GITHUB_ACCESS_TOKEN }}' | docker login ghcr.io -u ${{ secrets.TK_GITHUB_ACCESS_TOKEN_OWNER }} --password-stdin
+              # GHCR 로그인: TK_GITHUB_ACCESS_TOKEN_OWNER 대신 github.actor를 사용하도록 수정
+              echo '${{ secrets.TK_GITHUB_ACCESS_TOKEN }}' | docker login ghcr.io -u ${{ github.actor }} --password-stdin
           
               echo '${{ secrets.ENV_CONTENT }}' > /app/.env
   
