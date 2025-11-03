@@ -180,16 +180,20 @@ jobs:
             --zone "${INSTANCE_ZONE}" \
             --project "${{ secrets.GCP_PROJECT_ID }}" \
             --command "
-              # 로컬(Runner) 변수는 그대로 둡니다. (APP_IMAGE_PATH)
+              # 1. GH Actions 변수를 원격 쉘 변수에 할당 (Runner가 값만 삽입)
               APP_IMAGE_PATH_RAW=\"${APP_IMAGE_PATH}\"
+              NETWORK_NAME_RAW=\"${{ secrets.DB_NETWORK_NAME }}\"
+              DB_HOST_RAW=\"${{ secrets.DB_HOST }}\"
+              DB_PORT_RAW=\"${{ secrets.DB_PORT }}\"
+              DB_NAME_RAW=\"${{ secrets.DB_NAME }}\"
           
-              # !!! 수정된 부분: APP_IMAGE_PATH_RAW는 원격에서 치환되어야 하므로 \$로 이스케이프합니다.
+              # 2. APP_NAME_TAG 정의: \$를 사용하여 원격 쉘에서만 치환되도록 보호
               APP_NAME_TAG=\"\${APP_IMAGE_PATH_RAW}:latest\"
           
               # 실패시 중지
               set -e
           
-              # $USER 변수는 원격 서버의 현재 사용자로 치환되어야 하므로 \$로 이스케이프합니다.
+              # \$USER 변수는 원격 서버의 현재 사용자로 치환되도록 \$로 이스케이프
               sudo mkdir -p /app
               sudo chown -R \$USER:\$USER /app
           
@@ -202,31 +206,29 @@ jobs:
               # env 파일 저장
               echo '${{ secrets.ENV_CONTENT }}' > /app/.env
           
-              # db container 실행
-              # DB 관련 변수는 모두 원격 서버 쉘에서 치환되어야 하므로 \$로 이스케이프합니다.
-              NETWORK_NAME=\${{ secrets.DB_NETWORK_NAME }}
-              DB_HOST=\${{ secrets.DB_HOST }}
-              DB_PORT=\${{ secrets.DB_PORT }}
-              DB_NAME=\${{ secrets.DB_NAME }}
-              sudo docker network create \${NETWORK_NAME} 2>/dev/null || true
-              sudo docker stop \${DB_HOST} 2>/dev/null || true
-              sudo docker rm \${DB_HOST} 2>/dev/null || true
-              sudo docker run -d --name \${DB_HOST} --restart=always --network \${NETWORK_NAME} -p \${DB_PORT}:\${DB_PORT} -e MYSQL_ROOT_PASSWORD='${{ secrets.DB_ROOT_PASSWORD }}' -e MYSQL_DATABASE='${{ secrets.DB_NAME }}' -v mysql_data:/var/lib/mysql mysql:8.0
+              # 3. 변수 유효성 검사 (if 문으로 변경하여 gcloud 파싱 오류 회피)
+              if [ -z \"\${APP_NAME_TAG}\" ]; then
+                echo \"Error: APP_NAME_TAG is not set.\"
+                exit 1
+              fi
+
+              # db container 실행: 모든 원격 쉘 변수 사용 시 \$로 이스케이프
+              sudo docker network create \${NETWORK_NAME_RAW} 2>/dev/null || true
+              sudo docker stop \${DB_HOST_RAW} 2>/dev/null || true
+              sudo docker rm \${DB_HOST_RAW} 2>/dev/null || true
+              sudo docker run -d --name \${DB_HOST_RAW} --restart=always --network \${NETWORK_NAME_RAW} -p \${DB_PORT_RAW}:\${DB_PORT_RAW} -e MYSQL_ROOT_PASSWORD='${{ secrets.DB_ROOT_PASSWORD }}' -e MYSQL_DATABASE='${{ secrets.DB_NAME }}' -v mysql_data:/var/lib/mysql mysql:8.0
               sudo sleep 10
           
               # 이미지 Pull, 컨테이너 중지/제거, 새 컨테이너 실행
-              # APP_NAME_TAG는 원격 변수이므로 \$로 이스케이프합니다.
-              echo "---APP_IMAGE_TAG=\${APP_NAME_TAG}---"
-              : "\${APP_NAME_TAG:?APP_NAME_TAG is not set}"
-          
-          
-          
+              echo "---APP_IMAGE_TAG=\${APP_NAME_TAG}---" # APP_NAME_TAG 사용 시 \$ 이스케이프
           
               sudo docker pull \${APP_NAME_TAG} && \
               sudo docker stop app1 2>/dev/null || true && \
               sudo docker rm app1 2>/dev/null || true && \
-              sudo docker run --restart=always -e TZ=UTC --env-file=/app/.env --network \${NETWORK_NAME} -d --name app1 -p 8080:8080 -v /dockerProjects/logs:/app/logs \${APP_NAME_TAG}
+              sudo docker run --restart=always -e TZ=UTC --env-file=/app/.env --network \${NETWORK_NAME_RAW} -d --name app1 -p 8080:8080 -v /dockerProjects/logs:/app/logs \${APP_NAME_TAG}
           
-              # Dangling 이미지 정리: 이중 이스케이프 \\$를 사용해야 원격 쉘에서 \$(docker images...)로 인식합니다.
-              sudo docker rmi \\$(docker images -f \"dangling=true\" -q) || true
+              # 4. Dangling 이미지 정리: $ 이스케이프 (\$) 및 내부 따옴표 이스케이프 (\")
+              # 이중 이스케이프를 제거하고, $와 "만 이스케이프하여 전달합니다.
+              # 로컬 쉘에서 \$(...)을 보호하기 위해 $ 앞에 \를 붙이고, 내부 "를 보호하기 위해 \"를 붙여야 합니다.
+              sudo docker rmi \$(docker images -f \\"dangling=true\\" -q) || true
             "
