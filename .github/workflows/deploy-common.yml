@@ -180,17 +180,15 @@ jobs:
             --zone "${INSTANCE_ZONE}" \
             --project "${{ secrets.GCP_PROJECT_ID }}" \
             --command "
-              # 로그 파일 경로 설정
-              LOG_FILE=/deploy.log
-          
-              # 기존 로그 덮어쓰기 (출력은 하지 않음)
-              exec > \$LOG_FILE 2>&1
-          
-              echo '=== [GCE] 배포 시작 ==='
-              date
-          
               # 실패시 중지
               set -e
+          
+              # 로그 파일 경로 설정
+              LOG_FILE=/tmp/deploy.log
+          
+              {
+              echo '=== [GCE] 배포 시작 ==='
+              date
           
               APP_IMAGE_PATH_RAW=\"${APP_IMAGE_PATH}\"
               APP_NAME_TAG=\"\${APP_IMAGE_PATH_RAW// /}:latest\"
@@ -235,6 +233,7 @@ jobs:
           
               echo '=== [GCE] 배포 완료 ==='
               date
+              } > \$LOG_FILE 2>&1
             "
           
           rm /tmp/key.json
