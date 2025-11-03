@@ -194,8 +194,8 @@ jobs:
           
               # GHCR 로그인: TK_GITHUB_ACCESS_TOKEN_OWNER 대신 github.actor를 사용하도록 수정
               echo '${{ secrets.TK_GITHUB_ACCESS_TOKEN }}' | sudo docker login ghcr.io -u ${{ github.actor }} --password-stdin
-          
-              echo '${{ secrets.ENV_CONTENT }}' > /app/.env
+              
+              echo "${{ secrets.ENV_CONTENT }}" | base64 -d > /app/.env
   
               if [ -z \"\${APP_NAME_TAG}\" ]; then
                 echo \"Error: APP_NAME_TAG is not set.\"
