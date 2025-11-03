@@ -1,5 +1,9 @@
 package com.samteam.teammate.global.config;
 
+import com.samteam.teammate.domain.member.provider.AuthTokenProvider;
+import com.samteam.teammate.domain.member.repository.MemberRepository;
+import com.samteam.teammate.global.security.JWTAuthenticationFilter;
+import com.samteam.teammate.global.security.JwtAuthEntryPoint;
 import java.util.Arrays;
 import java.util.List;
 
@@ -9,11 +13,12 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.header.writers.frameoptions.XFrameOptionsHeaderWriter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -23,21 +28,39 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @EnableMethodSecurity
 public class SecurityConfig {
 
+    private final AuthTokenProvider authTokenProvider;
+    private final MemberRepository memberRepository;
+
+
+    public SecurityConfig(AuthTokenProvider authTokenProvider, MemberRepository memberRepository) {
+        this.authTokenProvider = authTokenProvider;
+        this.memberRepository = memberRepository;
+    }
+
 	@Bean
 	public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-		http
-			.cors(
-				httpSecurityCorsConfigurer -> httpSecurityCorsConfigurer.configurationSource(corsConfigurationSource()))
+        JWTAuthenticationFilter jwtFilter = new JWTAuthenticationFilter(authTokenProvider, memberRepository);
+        http
+            .cors(c -> c.configurationSource(
+                corsConfigurationSource()))
 			.csrf(AbstractHttpConfigurer::disable)
-			.headers(headers -> headers
-				.frameOptions(HeadersConfigurer.FrameOptionsConfig::disable)
-			)
-			.sessionManagement(session -> session
-				.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-			)
-			.authorizeHttpRequests(authorize -> authorize
-				.anyRequest().permitAll()
-			);
+            .headers(h -> h
+                .frameOptions(f -> f.disable())
+                .addHeaderWriter(new XFrameOptionsHeaderWriter(XFrameOptionsHeaderWriter.XFrameOptionsMode.SAMEORIGIN))
+            )
+            .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .exceptionHandling(eh -> eh.authenticationEntryPoint(new JwtAuthEntryPoint()))
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers(
+                    "/health",
+                    "/docs/**",
+                    "/actuator/**",
+                    "/h2-console/**",
+                    "/auth/**"
+                ).permitAll()
+                .anyRequest().authenticated()
+            )
+            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
 		return http.build();
 	}
@@ -61,6 +84,6 @@ public class SecurityConfig {
 	// 패스워드 암호화를 위한 Bean
 	@Bean
 	public PasswordEncoder passwordEncoder() {
-		return new BCryptPasswordEncoder();
+        return new BCryptPasswordEncoder();
 	}
 }
