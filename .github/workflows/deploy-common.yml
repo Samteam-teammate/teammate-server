@@ -175,15 +175,28 @@ jobs:
           
           echo "${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}" | base64 -d > /tmp/key.json
           gcloud auth activate-service-account --key-file=/tmp/key.json --project=${{ secrets.GCP_PROJECT_ID }}
-        
+          
           gcloud compute ssh "${INSTANCE_NAME}" \
             --zone "${INSTANCE_ZONE}" \
             --project "${{ secrets.GCP_PROJECT_ID }}" \
             --command "
-              APP_IMAGE_PATH_RAW=\"${APP_IMAGE_PATH}\"
-              APP_NAME_TAG=\"\${APP_IMAGE_PATH_RAW// /}:latest\"
+              # 로그 파일 경로 설정
+              LOG_FILE=/deploy.log
+          
+              # 기존 로그 덮어쓰기 (출력은 하지 않음)
+              exec > \$LOG_FILE 2>&1
+          
+              echo '=== [GCE] 배포 시작 ==='
+              date
+          
               # 실패시 중지
               set -e
+          
+              APP_IMAGE_PATH_RAW=\"${APP_IMAGE_PATH}\"
+              APP_NAME_TAG=\"\${APP_IMAGE_PATH_RAW// /}:latest\"
+          
+              echo \"APP_IMAGE_PATH=\${APP_IMAGE_PATH_RAW}\"
+              echo \"APP_NAME_TAG=\${APP_NAME_TAG}\"
           
               sudo mkdir -p /app
               sudo chown -R $USER:$USER /app
@@ -209,16 +222,19 @@ jobs:
               sudo sleep 10
           
               # 이미지 Pull, 컨테이너 중지/제거, 새 컨테이너 실행
-              echo "---APP_IMAGE_TAG=${APP_NAME_TAG}---"
-              : "${APP_NAME_TAG:?APP_IMAGE_TAG is not set}"
-              
+              echo "---DEBUG: APP_NAME_TAG=${APP_NAME_TAG}---"
+              : "${APP_NAME_TAG:?APP_NAME_TAG is not set}"
+          
               sudo docker pull ${APP_NAME_TAG} && \
               sudo docker stop app1 2>/dev/null || true && \
               sudo docker rm app1 2>/dev/null || true && \
               sudo docker run --restart=always -e TZ=UTC --env-file=/app/.env --network ${NETWORK_NAME} -d --name app1 -p 8080:8080 -v /dockerProjects/logs:/app/logs ${APP_NAME_TAG}
-                
+          
               # Dangling 이미지 정리
               sudo docker rmi \$(docker images -f \"dangling=true\" -q) || true
+          
+              echo '=== [GCE] 배포 완료 ==='
+              date
             "
           
           rm /tmp/key.json
