@@ -180,21 +180,19 @@ jobs:
             --zone "${INSTANCE_ZONE}" \
             --project "${{ secrets.GCP_PROJECT_ID }}" \
             --command "
-              # 실패시 중지
-              set -e
+              # 실패해도 로그 기록
+              set -o pipefail
           
               # 로그 파일 경로 설정
               LOG_FILE=/tmp/deploy.log
+              SUCCESS=1
           
               {
               echo '=== [GCE] 배포 시작 ==='
               date
           
-              APP_IMAGE_PATH_RAW=\"${APP_IMAGE_PATH}\"
-              APP_NAME_TAG=\"\${APP_IMAGE_PATH_RAW// /}:latest\"
-          
-              echo \"APP_IMAGE_PATH=\${APP_IMAGE_PATH_RAW}\"
-              echo \"APP_NAME_TAG=\${APP_NAME_TAG}\"
+              APP_NAME_TAG='${APP_IMAGE_PATH}:latest'
+              echo \"APP_NAME_TAG=\$APP_NAME_TAG\"
           
               sudo mkdir -p /app
               sudo chown -R $USER:$USER /app
@@ -203,37 +201,45 @@ jobs:
               echo '${{ secrets.TK_GITHUB_ACCESS_TOKEN }}' \
                 | docker login ghcr.io \
                     -u ${{ secrets.TK_GITHUB_ACCESS_TOKEN_OWNER }} \
-                    --password-stdin
+                    --password-stdin || SUCCESS=0
           
               # env 파일 저장
-              echo '${{ secrets.ENV_CONTENT }}' > /app/.env
+              echo '${{ secrets.ENV_CONTENT }}' > /app/.env || SUCCESS=0
           
               # db container 실행
               NETWORK_NAME=${{ secrets.DB_NETWORK_NAME }}
               DB_HOST=${{ secrets.DB_HOST }}
               DB_PORT=${{ secrets.DB_PORT }}
               DB_NAME=${{ secrets.DB_NAME }}
+              
               sudo docker network create ${NETWORK_NAME} 2>/dev/null || true
               sudo docker stop ${DB_HOST} 2>/dev/null || true
               sudo docker rm ${DB_HOST} 2>/dev/null || true
-              sudo docker run -d --name ${DB_HOST} --restart=always --network ${NETWORK_NAME} -p ${DB_PORT}:${DB_PORT} -e MYSQL_ROOT_PASSWORD='${{ secrets.DB_ROOT_PASSWORD }}' -e MYSQL_DATABASE='${{ secrets.DB_NAME }}' -v mysql_data:/var/lib/mysql mysql:8.0
+              sudo docker run -d --name ${DB_HOST} --restart=always --network ${NETWORK_NAME} -p ${DB_PORT}:${DB_PORT} -e MYSQL_ROOT_PASSWORD='${{ secrets.DB_ROOT_PASSWORD }}' -e MYSQL_DATABASE='${{ secrets.DB_NAME }}' -v mysql_data:/var/lib/mysql mysql:8.0 || SUCCESS=0
               sudo sleep 10
           
               # 이미지 Pull, 컨테이너 중지/제거, 새 컨테이너 실행
               echo "---DEBUG: APP_NAME_TAG=${APP_NAME_TAG}---"
               : "${APP_NAME_TAG:?APP_NAME_TAG is not set}"
           
-              sudo docker pull ${APP_NAME_TAG} && \
-              sudo docker stop app1 2>/dev/null || true && \
-              sudo docker rm app1 2>/dev/null || true && \
-              sudo docker run --restart=always -e TZ=UTC --env-file=/app/.env --network ${NETWORK_NAME} -d --name app1 -p 8080:8080 -v /dockerProjects/logs:/app/logs ${APP_NAME_TAG}
+              sudo docker pull ${APP_NAME_TAG} || SUCCESS=0
+              sudo docker stop app1 2>/dev/null || true
+              sudo docker rm app1 2>/dev/null || true
+              sudo docker run --restart=always -e TZ=UTC --env-file=/app/.env --network ${NETWORK_NAME} -d --name app1 -p 8080:8080 -v /dockerProjects/logs:/app/logs ${APP_NAME_TAG} || SUCCESS=0
           
               # Dangling 이미지 정리
               sudo docker rmi \$(docker images -f \"dangling=true\" -q) || true
           
               echo '=== [GCE] 배포 완료 ==='
               date
-              } > \$LOG_FILE 2>&1
+              } > \$LOG_FILE 2>&1 || SUCCESS=0
+          
+              cat \$LOG_FILE
+            
+              if [ \$SUCCESS -eq 0 ]; then
+                echo '--- 배포 중 오류 발생---'
+                exit 1
+              fi
             "
           
           rm /tmp/key.json
