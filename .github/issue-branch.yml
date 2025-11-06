@@ -8,26 +8,27 @@ gitSafeReplacementChar: "-"
 experimental:
   branchNameArgument: true
 branches:
-  - label: HOTFIX
+  - label: hotfix
     name: main
     prefix: hotfix/
   - label: release
+    name: main
     skipBranch: true
-  - label: question
-    skip: true
-  - label: test
-    prefix: test/
   - label: refactor
+    name: develop
     prefix: refactor/
   - label: docs
+    name: develop
     prefix: docs/
   - label: bug
+    name: develop
     prefix: bug/
-  - label: build
-    prefix: build/
   - label: style
+    name: develop
     prefix: style/
   - label: chore
+    name: develop
     prefix: chore/
   - label: "*"
+    name: develop
     prefix: feat/
