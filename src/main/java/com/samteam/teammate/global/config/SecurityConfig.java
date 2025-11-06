@@ -7,6 +7,7 @@ import com.samteam.teammate.global.security.JwtAuthEntryPoint;
 import java.util.Arrays;
 import java.util.List;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -26,20 +27,16 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
 
     private final AuthTokenProvider authTokenProvider;
     private final MemberRepository memberRepository;
 
 
-    public SecurityConfig(AuthTokenProvider authTokenProvider, MemberRepository memberRepository) {
-        this.authTokenProvider = authTokenProvider;
-        this.memberRepository = memberRepository;
-    }
-
-	@Bean
+    @Bean
 	public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        JWTAuthenticationFilter jwtFilter = new JWTAuthenticationFilter(authTokenProvider, memberRepository);
+        JWTAuthenticationFilter jwtFilter = new JWTAuthenticationFilter(authTokenProvider);
         http
             .cors(c -> c.configurationSource(
                 corsConfigurationSource()))
@@ -51,14 +48,7 @@ public class SecurityConfig {
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .exceptionHandling(eh -> eh.authenticationEntryPoint(new JwtAuthEntryPoint()))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers(
-                    "/health",
-                    "/docs/**",
-                    "/actuator/**",
-                    "/h2-console/**",
-                    "/auth/**"
-                ).permitAll()
-                .anyRequest().authenticated()
+                .anyRequest().permitAll()
             )
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
@@ -81,9 +71,4 @@ public class SecurityConfig {
 		return source;
 	}
 
-	// 패스워드 암호화를 위한 Bean
-	@Bean
-	public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-	}
 }

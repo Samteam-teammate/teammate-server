@@ -23,13 +23,6 @@ public class AuthService {
         return MemberLoginResponse.from(member);
     }
 
-    /** 학번으로 memberId만 해석해야 할 때 사용 가능 */
-    public Long resolveMemberIdByStudentId(Long studentId) {
-        return memberRepository.findByStudentId(studentId)
-            .map(Member::getId)
-            .orElseThrow(() -> new RuntimeException("사용자가 존재하지 않습니다"));
-    }
-
 	public String genAccessToken(MemberLoginResponse memberResponse) {
 		return authTokenProvider.genAccessToken(memberResponse.id());
 	}
