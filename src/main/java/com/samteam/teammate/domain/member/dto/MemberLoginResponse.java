@@ -6,6 +6,7 @@ import lombok.Builder;
 
 @Builder
 public record MemberLoginResponse(
+	// 로그인 완료 시 사용 되는 응답 형식
 	Long id
 ) {
 	public static MemberLoginResponse from(Member member) {
