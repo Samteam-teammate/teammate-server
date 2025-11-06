@@ -13,6 +13,7 @@ import com.samteam.teammate.domain.profile.dto.ProfileResponse;
 import com.samteam.teammate.domain.profile.service.ProfileService;
 import com.samteam.teammate.global.enums.FieldType;
 import com.samteam.teammate.global.enums.Major;
+import com.samteam.teammate.global.enums.TechType;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -30,13 +31,14 @@ public class ProfileController {
 	@GetMapping()
 	public ResponseEntity<Page<ProfileResponse>> getAllVisibleProfiles(
 		@RequestParam(value = "major", required = false) Major major,
+		@RequestParam(value = "stack", required = false) TechType stack,
 		@RequestParam(value = "field", required = false) FieldType field,
 		@RequestParam(value = "page", defaultValue = "0") int page,
 		@RequestParam(value = "size", defaultValue = "20") int size) {
 
 		Pageable pageable = PageRequest.of(page, size);
 
-		Page<ProfileResponse> profiles= profileService.getVisibleProfiles(major, field, pageable);
+		Page<ProfileResponse> profiles= profileService.getVisibleProfiles(major, stack, field, pageable);
 
 		return ResponseEntity.ok(profiles);
 	}
