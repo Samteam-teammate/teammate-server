@@ -2,6 +2,7 @@ package com.samteam.teammate.domain.profile.entity;
 
 import com.samteam.teammate.domain.member.dto.MemberProfileUpdateRequest;
 import com.samteam.teammate.domain.member.entity.Member;
+import com.samteam.teammate.global.enums.TechType;
 import com.samteam.teammate.global.util.BaseTimeEntity;
 import com.samteam.teammate.global.enums.FieldType;
 import com.samteam.teammate.global.enums.Major;
@@ -51,11 +52,18 @@ public class Profile extends BaseTimeEntity {
 	private Integer grade;
 
 	@Enumerated(EnumType.STRING)
+	@Column(name = "tech_stack")
+	private TechType teckStack;
+
+	@Enumerated(EnumType.STRING)
 	@Column(name = "application_field")
 	private FieldType applicationField;
 
 	@Column(name = "contact_info", columnDefinition = "TEXT")
 	private String contactInfo;
+
+	@Column(name = "simple_info", columnDefinition = "TEXT")
+	private String simpleInfo;
 
 	@Column(name = "additional_info", columnDefinition = "TEXT")
 	private String additionalInfo;
@@ -73,11 +81,17 @@ public class Profile extends BaseTimeEntity {
 		if (dto.grade() != null) {
 			this.grade = dto.grade();
 		}
+		if (dto.techStack() != null) {
+			this.teckStack = dto.techStack();
+		}
 		if (dto.applicationField() != null) {
 			this.applicationField = dto.applicationField();
 		}
 		if (dto.contactInfo() != null) {
 			this.contactInfo = dto.contactInfo();
+		}
+		if (dto.simpleInfo() != null) {
+			this.simpleInfo = dto.simpleInfo();
 		}
 		if (dto.additionalInfo() != null) {
 			this.additionalInfo = dto.additionalInfo();
