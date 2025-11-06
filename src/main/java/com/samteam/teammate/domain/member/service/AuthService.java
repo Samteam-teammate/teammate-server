@@ -16,22 +16,12 @@ public class AuthService {
 
 	private final AuthTokenProvider authTokenProvider;
 	private final MemberRepository memberRepository;
-	private final PasswordEncoder passwordEncoder;
 
-	public MemberLoginResponse login(Long studentId, String password) {
-		Member member = memberRepository.findByStudentId(studentId)
-			.orElseThrow(() -> new RuntimeException("회원가입이 필요합니다"));
-
-		validateUser(password, member);
-
-		return MemberLoginResponse.from(member);
-	}
-
-	private void validateUser(String password, Member member) {
-		if (!passwordEncoder.matches(password, member.getPassword())) {
-			throw new RuntimeException("비밀번호가 일치하지 않습니다");
-		}
-	}
+    public MemberLoginResponse buildLoginResponseByStudentId(Long studentId) {
+        Member member = memberRepository.findByStudentId(studentId)
+            .orElseThrow(() -> new RuntimeException("사용자가 존재하지 않습니다"));
+        return MemberLoginResponse.from(member);
+    }
 
 	public String genAccessToken(MemberLoginResponse memberResponse) {
 		return authTokenProvider.genAccessToken(memberResponse.id());

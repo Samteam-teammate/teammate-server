@@ -26,14 +26,18 @@ public class AuthController {
 
 	private final AuthService authService;
 
-	@Operation(summary = "로그인")
+	@Operation(summary = "로그인(수정필요)-학번으로 토큰 발급/비번검증x")
 	@PostMapping("/login")
 	public ResponseEntity<BasicResponse> login(
 		@RequestBody @Validated MemberLoginRequest request,
 		HttpServletResponse response
 	) {
-		MemberLoginResponse loginResponse = authService.login(Long.valueOf(request.studentId()), request.password());
-		issueToken(response, loginResponse);
+        Long studentId = Long.valueOf(request.studentId());
+
+        // 비밀번호 검증 없이 학번으로 사용자 조회 → 로그인 응답 DTO 생성
+        MemberLoginResponse loginResponse = authService.buildLoginResponseByStudentId(studentId);
+
+        issueToken(response, loginResponse);
 
 		BasicResponse basicResponse = BasicResponse.of("로그인 성공");
 
