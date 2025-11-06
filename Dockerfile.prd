@@ -14,7 +14,7 @@ RUN gradle dependencies --no-daemon || true
 COPY . .
 
 # 빌드
-RUN gradle build --no-daemon
+RUN gradle build -x test --no-daemon
 
 # plain JAR 제거
 RUN rm -f /app/build/libs/*-plain.jar

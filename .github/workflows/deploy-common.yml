@@ -56,7 +56,7 @@ jobs:
       - name: GCE 인스턴스 이름 및 Zone 가져오기
         id: get_instance_info
         run: |
-          # 1. 인스턴스 이름 규칙 설정: teammate-server-[dev/prod]
+          # 1. 인스턴스 이름 규칙 설정: teammate-server-[dev/prd]
           TARGET_NAME="teammate-server-${{ inputs.instance_env }}"
           
           # 2. gcloud CLI를 사용하여 인스턴스 정보 조회 및 필터링
@@ -65,7 +65,7 @@ jobs:
             --filter="name=${TARGET_NAME} AND status=RUNNING" \
             --format="value(name,zone)" \
             --limit=1 \
-            --project=${{ inputs.GCP_PROJECT_ID }})
+            --project=${{ secrets.GCP_PROJECT_ID }})
           
           # 3. 조회 결과 파싱
           if [ -z "$INSTANCE_DATA" ]; then
@@ -73,14 +73,20 @@ jobs:
             exit 1
           fi
           
-          # 결과는 "인스턴스이름  zone/존이름" 형태로 나옴 (공백으로 구분)
-          INSTANCE_NAME=$(echo $INSTANCE_DATA | awk '{print $1}')
-          # Zone 정보는 URL 형태로 나오므로, 존 이름만 추출
-          INSTANCE_ZONE=$(echo $INSTANCE_DATA | awk -F'/' '{print $NF}')
           
+          INSTANCE_NAME=$(echo "$INSTANCE_DATA" | awk '{print $1}')
+          INSTANCE_ZONE_URL=$(echo "$INSTANCE_DATA" | awk '{print $2}')
+          
+          # zone URL에서 마지막만 추출
+          INSTANCE_ZONE=$(basename "$INSTANCE_ZONE_URL")
+          
+          # GitHub Actions output으로 내보내기
           echo "instance_name=$INSTANCE_NAME" >> $GITHUB_OUTPUT
           echo "zone=$INSTANCE_ZONE" >> $GITHUB_OUTPUT
-          echo "GCE 인스턴스: $INSTANCE_NAME, Zone: $INSTANCE_ZONE"
+
+          echo "GCE 인스턴스: $INSTANCE_NAME"
+          echo "Zone: $INSTANCE_ZONE"
+
 
   # 2. 태그 및 릴리스 생성 (단순한 파이프라인을 위해 GHCR 사용)
   makeTagAndRelease:
@@ -145,8 +151,8 @@ jobs:
       - name: 빌드 앤 푸시
         uses: docker/build-push-action@v3
         with:
-          context: backend
-          file: backend/${{ inputs.dockerfile }}
+          context: .
+          file: ${{ inputs.dockerfile }}
           push: true
           cache-from: type=registry,ref=ghcr.io/${{ steps.export_owner.outputs.owner_lc }}/${{ steps.export_image.outputs.image_name }}:cache
           cache-to: type=registry,ref=ghcr.io/${{ steps.export_owner.outputs.owner_lc }}/${{ steps.export_image.outputs.image_name }}:cache,mode=max
@@ -160,64 +166,54 @@ jobs:
     runs-on: ubuntu-latest
     needs: [buildImageAndPush, get-instance-info]
     steps:
-      - name: GCP CLI 및 SSH 설정
-        uses: google-github-actions/setup-gcloud@v2
-        with:
-          service_account_key: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
-          project_id: ${{ inputs.GCP_PROJECT_ID }}
-
-      - name: GCE SSH로 배포
+      - name: GCE 인증 및 SSH로 배포
         run: |
           INSTANCE_NAME=${{ needs.get-instance-info.outputs.instance_name }}
           INSTANCE_ZONE=${{ needs.get-instance-info.outputs.zone }}
-        
+          APP_IMAGE_PATH="ghcr.io/${{ needs.buildImageAndPush.outputs.owner_lc }}/${{ needs.buildImageAndPush.outputs.image_name }}"
+          
+          echo "---DEBUG: APP_IMAGE_PATH (GH Actions)='${APP_IMAGE_PATH}'---"
+          
+          echo "${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}" | base64 -d > /tmp/key.json
+          gcloud auth activate-service-account --key-file=/tmp/key.json --project=${{ secrets.GCP_PROJECT_ID }}
+          
           gcloud compute ssh "${INSTANCE_NAME}" \
             --zone "${INSTANCE_ZONE}" \
-            --project "${{ inputs.GCP_PROJECT_ID }}" \
+            --project "${{ secrets.GCP_PROJECT_ID }}" \
             --command "
-              # 실패시 중지
+              APP_IMAGE_PATH_RAW=\"${APP_IMAGE_PATH}\"
+              APP_NAME_TAG=\"\${APP_IMAGE_PATH_RAW}:latest\"
               set -e
+              NETWORK_NAME_RAW=\"${{ secrets.DB_NETWORK_NAME }}\"
+              DB_HOST_RAW=\"${{ secrets.DB_HOST }}\"
+              DB_PORT_RAW=\"${{ secrets.DB_PORT }}\"
+              DB_NAME_RAW=\"${{ secrets.DB_NAME }}\"
           
-              # GHCR 로그인
-              echo '${{ secrets.TK_GITHUB_ACCESS_TOKEN }}' \
-                | docker login ghcr.io \
-                    -u ${{ secrets.TK_GITHUB_ACCESS_TOKEN_OWNER }} \
-                    --password-stdin
+              sudo mkdir -p /app
+              sudo chown -R \$USER:\$USER /app
           
-              # env 파일 저장
-              echo '${{ secrets.ENV_CONTENT }}' > /app/.env
+              # GHCR 로그인: TK_GITHUB_ACCESS_TOKEN_OWNER 대신 github.actor를 사용하도록 수정
+              echo '${{ secrets.TK_GITHUB_ACCESS_TOKEN }}' | sudo docker login ghcr.io -u ${{ github.actor }} --password-stdin
+              
+              echo "${{ secrets.ENV_CONTENT }}" | base64 -d > /app/.env
+  
+              if [ -z \"\${APP_NAME_TAG}\" ]; then
+                echo \"Error: APP_NAME_TAG is not set.\"
+                exit 1
+              fi
           
-              # db container 실행
-              NETWORK_NAME=${{ secrets.DB_NETWORK_NAME }}
-              DB_HOST=${{ secrets.DB_HOST }}
-              DB_PORT=${{ secrets.DB_PORT }}
-              DB_NAME=${{ secrets.DB_NAME }}
-              docker network create ${NETWORK_NAME} 2>/dev/null || true
-              docker stop ${DB_HOST} 2>/dev/null || true
-              docker rm ${DB_HOST} 2>/dev/null || true
-              docker run -d --name ${DB_HOST} \
-                --restart always \
-                --network ${NETWORK_NAME} \
-                -p ${DB_PORT}:${DB_PORT} \
-                -e MYSQL_ROOT_PASSWORD='${{ secrets.MYSQL_ROOT_PASSWORD }}' \
-                -e MYSQL_DATABASE='${{ secrets.DB_NAME }}' \
-                # 사용자 설정 필요
-                -v mysql_data:/var/lib/mysql \
-              mysql:8.0
-              sleep 10
+              sudo docker network create \${NETWORK_NAME_RAW} 2>/dev/null || true
+              sudo docker stop \${DB_HOST_RAW} 2>/dev/null || true
+              sudo docker rm \${DB_HOST_RAW} 2>/dev/null || true
+              sudo docker run -d --name \${DB_HOST_RAW} --restart=always --network \${NETWORK_NAME_RAW} -p \${DB_PORT_RAW}:\${DB_PORT_RAW} -e MYSQL_ROOT_PASSWORD='${{ secrets.DB_ROOT_PASSWORD }}' -e MYSQL_DATABASE='${{ secrets.DB_NAME }}' -v mysql_data:/var/lib/mysql mysql:8.0
+              sudo sleep 10
           
-              # 이미지 Pull, 컨테이너 중지/제거, 새 컨테이너 실행
-              docker pull ghcr.io/${{ needs.buildImageAndPush.outputs.owner_lc }}/${{ needs.buildImageAndPush.outputs.image_name }}:latest && \
-              docker stop app1 2>/dev/null || true && \
-              docker rm app1 2>/dev/null || true && \
-              docker run --restart always \
-                -e TZ=UTC \
-                --env-file /app/.env \
-                --network ${NETWORK_NAME} \
-                -d --name app1 -p 8080:8080 \
-                -v /dockerProjects/logs:/app/logs \
-                ghcr.io/${{ needs.buildImageAndPush.outputs.owner_lc }}/${{ needs.buildImageAndPush.outputs.image_name }}:latest
-                
-              # Dangling 이미지 정리
-              docker rmi \$(docker images -f \"dangling=true\" -q) || true
+              echo "---APP_IMAGE_TAG=\${APP_NAME_TAG}---"
+          
+              sudo docker pull \${APP_NAME_TAG} && \
+              sudo docker stop app1 2>/dev/null || true && \
+              sudo docker rm app1 2>/dev/null || true && \
+              sudo docker run --restart=always -e TZ=UTC --env-file=/app/.env --network \${NETWORK_NAME_RAW} -d --name app1 -p 8080:8080 -v /dockerProjects/logs:/app/logs \${APP_NAME_TAG}
+          
+              sudo docker rmi \$(docker images -f 'dangling=true' -q) || true
             "
