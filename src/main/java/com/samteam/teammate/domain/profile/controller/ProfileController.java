@@ -40,6 +40,6 @@ public class ProfileController {
 
 		Page<ProfileResponse> profiles= profileService.getVisibleProfiles(major, stack, field, pageable);
 
-		return BaseResponse.success("프로필 목록 조회에 성공했습니다.", profiles);
+		return BaseResponse.success("프로필 목록 조회에 성공했습니다", profiles);
 	}
 }

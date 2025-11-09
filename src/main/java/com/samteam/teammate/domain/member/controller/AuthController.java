@@ -38,7 +38,7 @@ public class AuthController {
 
         issueToken(response, loginResponse);
 
-		return BaseResponse.success("로그인에 성공했습니다.");
+		return BaseResponse.success("로그인에 성공했습니다");
 	}
 
 	private void issueToken(HttpServletResponse response, MemberLoginResponse member) {

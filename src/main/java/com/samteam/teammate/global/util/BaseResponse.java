@@ -2,9 +2,8 @@ package com.samteam.teammate.global.util;
 
 import org.springframework.http.HttpStatus;
 
-import lombok.Getter;
+import com.samteam.teammate.global.exception.docs.ErrorCode;
 
-@Getter
 public record BaseResponse<T>(
 	HttpStatus status,
 	String message,
@@ -17,5 +16,9 @@ public record BaseResponse<T>(
 
 	public static <T> BaseResponse<T> success(String message, T data) {
 		return new BaseResponse<>(HttpStatus.OK, message, data);
+	}
+
+	public static BaseResponse<?> fail(ErrorCode e) {
+		return new BaseResponse<>(e.getStatus(), e.getMessage(), e.getCode());
 	}
 }

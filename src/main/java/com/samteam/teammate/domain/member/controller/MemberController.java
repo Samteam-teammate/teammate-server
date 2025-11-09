@@ -25,7 +25,7 @@ public class MemberController {
     public BaseResponse<MemberProfileResponse> getProfile(
         @AuthenticationPrincipal MemberPrincipal principal
     ) {
-        return BaseResponse.success("프로필 조회에 성공했습니다.", memberService.getProfile(principal.id()));
+        return BaseResponse.success("프로필 조회에 성공했습니다", memberService.getProfile(principal.id()));
     }
 
     @Operation(summary = "본인 프로필 수정")
@@ -35,6 +35,6 @@ public class MemberController {
         @RequestBody MemberProfileUpdateRequest request
     ) {
         var resp = memberService.updateProfile(principal.id(), request);
-        return BaseResponse.success("프로필 수정에 성공했습니다.", resp);
+        return BaseResponse.success("프로필 수정에 성공했습니다", resp);
     }
 }
