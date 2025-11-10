@@ -1,8 +1,8 @@
-package com.samteam.teammate.domain.member.dto;
+package com.samteam.teammate.domain.auth.dto;
 
 import jakarta.validation.constraints.NotBlank;
 
-public record MemberLoginRequest(
+public record AuthLoginRequest(
 	// 로그인 요청시 사용 되는 요청 형식
 	// 학번
 	@NotBlank(message = "학번을 입력해주세요.")

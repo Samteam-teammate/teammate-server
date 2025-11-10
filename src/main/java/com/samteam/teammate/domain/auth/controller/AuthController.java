@@ -1,4 +1,4 @@
-package com.samteam.teammate.domain.member.controller;
+package com.samteam.teammate.domain.auth.controller;
 
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
@@ -8,9 +8,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.samteam.teammate.domain.member.dto.MemberLoginRequest;
+import com.samteam.teammate.domain.auth.dto.AuthLoginRequest;
 import com.samteam.teammate.domain.member.dto.MemberLoginResponse;
-import com.samteam.teammate.domain.member.service.AuthService;
+import com.samteam.teammate.domain.auth.service.AuthService;
 import com.samteam.teammate.global.util.BasicResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -26,21 +26,18 @@ public class AuthController {
 
 	private final AuthService authService;
 
-	@Operation(summary = "로그인(수정필요)-학번으로 토큰 발급/비번검증x")
+	@Operation(summary = "로그인")
 	@PostMapping("/login")
 	public ResponseEntity<BasicResponse> login(
-		@RequestBody @Validated MemberLoginRequest request,
+		@RequestBody @Validated AuthLoginRequest request,
 		HttpServletResponse response
 	) {
-        Long studentId = Long.valueOf(request.studentId());
+		authService.authenticateSejong(request);
+		MemberLoginResponse loginResponse = authService.buildLoginResponseByStudentId(Long.valueOf(request.studentId()));
 
-        // 비밀번호 검증 없이 학번으로 사용자 조회 → 로그인 응답 DTO 생성
-        MemberLoginResponse loginResponse = authService.buildLoginResponseByStudentId(studentId);
-
-        issueToken(response, loginResponse);
+		issueToken(response, loginResponse);
 
 		BasicResponse basicResponse = BasicResponse.of("로그인 성공");
-
 		return ResponseEntity.ok(basicResponse);
 	}
 
