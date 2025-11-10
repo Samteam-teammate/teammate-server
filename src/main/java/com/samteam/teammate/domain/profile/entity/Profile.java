@@ -1,5 +1,7 @@
 package com.samteam.teammate.domain.profile.entity;
 
+import java.util.List;
+
 import com.samteam.teammate.domain.member.dto.MemberProfileUpdateRequest;
 import com.samteam.teammate.domain.member.entity.Member;
 import com.samteam.teammate.global.enums.TechType;
@@ -53,10 +55,10 @@ public class Profile extends BaseTimeEntity {
 
 	@Enumerated(EnumType.STRING)
 	@Column(name = "tech_stack")
-	private TechType teckStack;
+	private List<TechType> teckStack;
 
 	@Enumerated(EnumType.STRING)
-	@Column(name = "application_field")
+	@Column(name = "application_field", columnDefinition = "VARCHAR(20)")
 	private FieldType applicationField;
 
 	@Column(name = "contact_info", columnDefinition = "TEXT")
