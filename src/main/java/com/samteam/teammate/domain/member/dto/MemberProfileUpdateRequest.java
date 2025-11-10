@@ -1,5 +1,7 @@
 package com.samteam.teammate.domain.member.dto;
 
+import java.util.List;
+
 import com.samteam.teammate.global.enums.FieldType;
 import com.samteam.teammate.global.enums.Major;
 import com.samteam.teammate.global.enums.TechType;
@@ -9,7 +11,7 @@ public record MemberProfileUpdateRequest(
 	String name,
 	Major major,
 	Integer grade,
-	TechType techStack,
+	List<TechType> techStack,
 	FieldType applicationField,
 	String simpleInfo,
 	String contactInfo,
