@@ -1,12 +1,13 @@
 package com.samteam.teammate.domain.member.service;
 
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.samteam.teammate.domain.member.dto.MemberLoginResponse;
 import com.samteam.teammate.domain.member.entity.Member;
 import com.samteam.teammate.domain.member.provider.AuthTokenProvider;
 import com.samteam.teammate.domain.member.repository.MemberRepository;
+import com.samteam.teammate.global.exception.BusinessException;
+import com.samteam.teammate.global.exception.docs.ErrorCode;
 
 import lombok.RequiredArgsConstructor;
 
@@ -19,7 +20,7 @@ public class AuthService {
 
     public MemberLoginResponse buildLoginResponseByStudentId(Long studentId) {
         Member member = memberRepository.findByStudentId(studentId)
-            .orElseThrow(() -> new RuntimeException("사용자가 존재하지 않습니다"));
+            .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
         return MemberLoginResponse.from(member);
     }
 
