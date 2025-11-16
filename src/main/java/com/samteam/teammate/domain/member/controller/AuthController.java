@@ -1,7 +1,6 @@
 package com.samteam.teammate.domain.member.controller;
 
 import org.springframework.http.ResponseCookie;
-import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -11,7 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.samteam.teammate.domain.member.dto.MemberLoginRequest;
 import com.samteam.teammate.domain.member.dto.MemberLoginResponse;
 import com.samteam.teammate.domain.member.service.AuthService;
-import com.samteam.teammate.global.util.BasicResponse;
+import com.samteam.teammate.global.util.BaseResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -28,7 +27,7 @@ public class AuthController {
 
 	@Operation(summary = "로그인(수정필요)-학번으로 토큰 발급/비번검증x")
 	@PostMapping("/login")
-	public ResponseEntity<BasicResponse> login(
+	public BaseResponse<?> login(
 		@RequestBody @Validated MemberLoginRequest request,
 		HttpServletResponse response
 	) {
@@ -39,9 +38,7 @@ public class AuthController {
 
         issueToken(response, loginResponse);
 
-		BasicResponse basicResponse = BasicResponse.of("로그인 성공");
-
-		return ResponseEntity.ok(basicResponse);
+		return BaseResponse.success("로그인에 성공했습니다");
 	}
 
 	private void issueToken(HttpServletResponse response, MemberLoginResponse member) {
