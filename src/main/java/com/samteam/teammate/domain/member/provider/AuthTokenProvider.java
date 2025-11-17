@@ -1,5 +1,6 @@
 package com.samteam.teammate.domain.member.provider;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 import javax.crypto.SecretKey;
@@ -11,85 +12,59 @@ import io.jsonwebtoken.security.Keys;
 
 @Component
 public class AuthTokenProvider {
-	@Value("${custom.jwt.secret-key}")
-	private String secret;
 
-	@Value("${custom.jwt.access-expire-seconds}")
-	private int jwtAccessExpireSeconds;
+    @Value("${custom.jwt.secret-key}")
+    private String secret;
 
-	@Value("${custom.jwt.refresh-expire-seconds}")
-	private int jwtRefreshExpireSeconds;
+    @Value("${custom.jwt.access-expire-seconds}")
+    private int jwtAccessExpireSeconds;
 
-	public String genAccessToken(Long id) {
+    @Value("${custom.jwt.refresh-expire-seconds}")
+    private int jwtRefreshExpireSeconds;
 
-		SecretKey secretKey = Keys.hmacShaKeyFor(secret.getBytes());
+    private SecretKey secretKey() {
+        return Keys.hmacShaKeyFor(secret.getBytes());
+    }
 
-		Date issuedAt = new Date();
-		Date expiration = new Date(issuedAt.getTime() + 1000L * jwtAccessExpireSeconds);
+    private String buildToken(String subject, long expireSeconds) {
+        Date issuedAt = new Date();
+        Date expiration = new Date(issuedAt.getTime() + 1000L * expireSeconds);
 
-		return Jwts.builder()
-			.subject(String.valueOf(id))
-			.issuedAt(issuedAt)
-			.expiration(expiration)
-			.signWith(secretKey)
-			.compact();
-	}
+        return Jwts.builder()
+            .subject(subject)
+            .issuedAt(issuedAt)
+            .expiration(expiration)
+            .signWith(secretKey())
+            .compact();
+    }
 
-	public String genRefreshToken(Long id) {
+    public String createAccessToken(Long id) {
+        return buildToken(String.valueOf(id), jwtAccessExpireSeconds);
+    }
 
-		SecretKey secretKey = Keys.hmacShaKeyFor(secret.getBytes());
+    public String genRefreshToken(Long id) {
+        return buildToken(String.valueOf(id), jwtRefreshExpireSeconds);
+    }
 
-		Date issuedAt = new Date();
-		Date expiration = new Date(issuedAt.getTime() + 1000L * jwtRefreshExpireSeconds);
+    public boolean isValidToken(String token) {
+        try {
+            Jwts.parser()
+                .verifyWith(secretKey())
+                .build()
+                .parse(token);
+            return true;
+        } catch (Exception e) {
+            // TODO: 로깅은 여기서 하거나 GlobalExceptionHandler에서
+            return false;
+        }
+    }
 
-		return Jwts.builder()
-			.subject(String.valueOf(id))
-			.issuedAt(issuedAt)
-			.expiration(expiration)
-			.signWith(secretKey)
-			.compact();
-	}
-
-	public boolean isValidToken(String token) {
-		try {
-			SecretKey secretKey = Keys.hmacShaKeyFor(secret.getBytes());
-
-			Jwts
-				.parser()
-				.verifyWith(secretKey)
-				.build()
-				.parse(token);
-
-		} catch (Exception e) {
-			e.printStackTrace();
-			return false;
-		}
-
-		return true;
-
-	}
-
-	/*public Map<String, Object> verifyToken(String token) {
-		try {
-			SecretKey secretKey = Keys.hmacShaKeyFor(secret.getBytes());
-			Claims claims = Jwts.parser()
-				.verifyWith(secretKey)
-				.build()
-				.parseSignedClaims(token)
-				.getPayload();
-			return new HashMap<>(claims);
-		} catch (JwtException e) {
-			return null;
-		}
-	}*/
-
-	public String getSubject(String token) {
-		SecretKey secretKey = Keys.hmacShaKeyFor(secret.getBytes());
-		return Jwts.parser()
-			.verifyWith(secretKey)
-			.build()
-			.parseSignedClaims(token)
-			.getPayload()
-			.getSubject();
-	}
+    public String getSubject(String token) {
+        return Jwts.parser()
+            .verifyWith(secretKey())
+            .build()
+            .parseSignedClaims(token)
+            .getPayload()
+            .getSubject();
+    }
 }
