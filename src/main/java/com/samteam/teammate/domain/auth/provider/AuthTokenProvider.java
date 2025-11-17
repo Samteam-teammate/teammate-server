@@ -1,6 +1,5 @@
-package com.samteam.teammate.domain.member.provider;
+package com.samteam.teammate.domain.auth.provider;
 
-import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 import javax.crypto.SecretKey;
@@ -42,7 +41,7 @@ public class AuthTokenProvider {
         return buildToken(String.valueOf(id), jwtAccessExpireSeconds);
     }
 
-    public String genRefreshToken(Long id) {
+    public String createRefreshToken(Long id) {
         return buildToken(String.valueOf(id), jwtRefreshExpireSeconds);
     }
 

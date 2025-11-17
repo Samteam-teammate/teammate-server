@@ -1,7 +1,6 @@
 package com.samteam.teammate.global.config;
 
-import com.samteam.teammate.domain.member.provider.AuthTokenProvider;
-import com.samteam.teammate.domain.member.repository.MemberRepository;
+import com.samteam.teammate.domain.auth.provider.AuthTokenProvider;
 import java.util.Arrays;
 import java.util.List;
 
@@ -14,6 +13,7 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -29,7 +29,6 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class SecurityConfig {
 
     private final AuthTokenProvider authTokenProvider;
-    private final MemberRepository memberRepository;
 
 
     @Bean
@@ -40,7 +39,7 @@ public class SecurityConfig {
                 corsConfigurationSource()))
 			.csrf(AbstractHttpConfigurer::disable)
             .headers(h -> h
-                .frameOptions(f -> f.disable())
+                .frameOptions(HeadersConfigurer.FrameOptionsConfig::disable)
                 .addHeaderWriter(new XFrameOptionsHeaderWriter(XFrameOptionsHeaderWriter.XFrameOptionsMode.SAMEORIGIN))
             )
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
