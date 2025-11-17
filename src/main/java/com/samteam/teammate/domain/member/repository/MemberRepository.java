@@ -8,4 +8,5 @@ import com.samteam.teammate.domain.member.entity.Member;
 
 public interface MemberRepository extends JpaRepository<Member, Long> {
 	Optional<Member> findByStudentId(Long studentId);
+	Boolean existsByStudentId(Long studentId);
 }

@@ -16,6 +16,7 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +29,7 @@ public class PortalAuthService {
     private final AuthTokenProvider jwt;
     private final MemberRepository memberRepository;
 
+    @Transactional(readOnly = true)
     public LoginResult login(Long id, String pw, HttpServletResponse response) {
         SejongMemberInfo info;
 
@@ -62,7 +64,12 @@ public class PortalAuthService {
 
         // 사용자가 존재하지 않으면 예외 처리
         Member member = memberRepository.findByStudentId(id)
-            .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
+            .orElseThrow(() -> {
+                // member, profile 생성을 위해 임시 토큰 발급
+                // member 생성 요청시 sju auth에 성공했음을 알기 위함
+                issueTemporaryToken(response, id);
+				return new BusinessException(ErrorCode.MEMBER_NOT_FOUND);
+            });
         // 사용자가 존재하면 jwt 발행
         issueToken(response, member.getId());
 
@@ -74,9 +81,15 @@ public class PortalAuthService {
             .build();
     }
 
+    public void issueTemporaryToken(HttpServletResponse response, Long id) {
+        // TODO: temp token 더 깔끔하게 발행
+        /*String accessToken = jwt.createAccessToken(id, "yes");
+        response.setHeader("Authorization", "Bearer " + accessToken);*/
+    }
+
     public void issueToken(HttpServletResponse response, Long id) {
-        String accessToken = jwt.createAccessToken(id);
-        String refreshToken = jwt.createRefreshToken(id);
+        String accessToken = jwt.createAccessToken(id, "no");
+        String refreshToken = jwt.createRefreshToken(id, "no");
 
         ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", refreshToken)
             .httpOnly(true)
