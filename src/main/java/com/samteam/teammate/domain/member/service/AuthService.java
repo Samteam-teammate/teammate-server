@@ -25,7 +25,7 @@ public class AuthService {
     }
 
 	public String genAccessToken(MemberLoginResponse memberResponse) {
-		return authTokenProvider.genAccessToken(memberResponse.id());
+		return authTokenProvider.createAccessToken(memberResponse.id());
 	}
 
 	public String genRefreshToken(MemberLoginResponse memberResponse) {
