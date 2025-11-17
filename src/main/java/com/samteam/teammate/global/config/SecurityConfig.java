@@ -1,7 +1,6 @@
 package com.samteam.teammate.global.config;
 
-import com.samteam.teammate.domain.member.provider.AuthTokenProvider;
-import com.samteam.teammate.domain.member.repository.MemberRepository;
+import com.samteam.teammate.domain.auth.provider.AuthTokenProvider;
 import java.util.Arrays;
 import java.util.List;
 
@@ -10,10 +9,12 @@ import com.samteam.teammate.global.security.JWTAuthenticationFilter;
 import com.samteam.teammate.global.security.JwtAuthEntryPoint;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -29,7 +30,6 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class SecurityConfig {
 
     private final AuthTokenProvider authTokenProvider;
-    private final MemberRepository memberRepository;
 
 
     @Bean
@@ -40,13 +40,14 @@ public class SecurityConfig {
                 corsConfigurationSource()))
 			.csrf(AbstractHttpConfigurer::disable)
             .headers(h -> h
-                .frameOptions(f -> f.disable())
+                .frameOptions(HeadersConfigurer.FrameOptionsConfig::disable)
                 .addHeaderWriter(new XFrameOptionsHeaderWriter(XFrameOptionsHeaderWriter.XFrameOptionsMode.SAMEORIGIN))
             )
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .exceptionHandling(eh -> eh.authenticationEntryPoint(new JwtAuthEntryPoint()))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/login", "/swagger-ui/**", "/v3/api-docs/**", "/h2-console/**")
+				.requestMatchers(HttpMethod.POST, "/api/v1/member").permitAll()
+                .requestMatchers("/api/v1/auth/login", "/swagger-ui/**", "/v3/api-docs/**", "/h2-console/**")
                 .permitAll()
                 .anyRequest().authenticated()
             )

@@ -10,6 +10,7 @@ import lombok.Getter;
 public enum ErrorCode {
     // 400 Bad Request
     INVALID_INPUT(HttpStatus.BAD_REQUEST, "E400", "입력값이 올바르지 않습니다"),
+	MEMBER_ALREADY_EXIST(HttpStatus.BAD_REQUEST, "M002", "사용자가 이미 존재합니다"),
 
     // 401 Unauthorized
     AUTH_FAILED(HttpStatus.UNAUTHORIZED, "A001", "학번/비밀번호 인증에 실패했습니다"),

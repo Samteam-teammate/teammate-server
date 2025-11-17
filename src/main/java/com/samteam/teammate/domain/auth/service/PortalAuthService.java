@@ -3,14 +3,20 @@ package com.samteam.teammate.domain.auth.service;
 import com.chuseok22.sejongportallogin.core.SejongMemberInfo;
 import com.chuseok22.sejongportallogin.infrastructure.SejongPortalLoginService;
 import com.samteam.teammate.domain.auth.dto.LoginResult;
-import com.samteam.teammate.domain.auth.dto.UserMini;
-import com.samteam.teammate.domain.member.provider.AuthTokenProvider;
+import com.samteam.teammate.domain.auth.provider.AuthTokenProvider;
+import com.samteam.teammate.domain.member.entity.Member;
+import com.samteam.teammate.domain.member.repository.MemberRepository;
 import com.samteam.teammate.global.exception.BusinessException;
 import com.samteam.teammate.global.exception.docs.ErrorCode;
+
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -21,8 +27,10 @@ public class PortalAuthService {
     // 이 클래스들은 Bean으로 등록되어 있어야 합니다.
     private final SejongPortalLoginService portal;
     private final AuthTokenProvider jwt;
+    private final MemberRepository memberRepository;
 
-    public LoginResult login(Long id, String pw) {
+    @Transactional(readOnly = true)
+    public LoginResult login(Long id, String pw, HttpServletResponse response) {
         SejongMemberInfo info;
 
         try {
@@ -50,21 +58,49 @@ public class PortalAuthService {
             throw new BusinessException(ErrorCode.SERVER_ERROR);
         }
 
-        // 4. 정보 추출 및 JWT 발급
+        // 4. 정보 추출
         String major = info.getMajor();
         int grade = Integer.parseInt(info.getGrade().replaceAll("[^0-9]", "")); // 학년만 추출
-        String accessToken = jwt.createAccessToken(id); // subject=학번 사용
+
+        // 사용자가 존재하지 않으면 예외 처리
+        Member member = memberRepository.findByStudentId(id)
+            .orElseThrow(() -> {
+                // member, profile 생성을 위해 임시 토큰 발급
+                // member 생성 요청시 sju auth에 성공했음을 알기 위함
+                issueTemporaryToken(response, id);
+				return new BusinessException(ErrorCode.MEMBER_NOT_FOUND);
+            });
+        // 사용자가 존재하면 jwt 발행
+        issueToken(response, member.getId());
 
         // 5. 응답 모델 구성
-        UserMini user = UserMini.builder()
+        return LoginResult.builder()
             .username(id.toString())
             .major(major)
             .grade(grade)
             .build();
+    }
 
-        return LoginResult.builder()
-            .accessToken(accessToken)
-            .user(user)
+    public void issueTemporaryToken(HttpServletResponse response, Long id) {
+        // TODO: temp token 더 깔끔하게 발행
+        /*String accessToken = jwt.createAccessToken(id, "yes");
+        response.setHeader("Authorization", "Bearer " + accessToken);*/
+    }
+
+    public void issueToken(HttpServletResponse response, Long id) {
+        String accessToken = jwt.createAccessToken(id, "no");
+        String refreshToken = jwt.createRefreshToken(id, "no");
+
+        ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", refreshToken)
+            .httpOnly(true)
+            .secure(true)
+            .path("/")
+            .maxAge(604800) // 7일
+            .sameSite("None")
             .build();
+
+        // 쿠키 헤더를 수동으로 설정
+        response.setHeader("Set-Cookie", refreshCookie.toString());
+        response.setHeader("Authorization", "Bearer " + accessToken);
     }
 }

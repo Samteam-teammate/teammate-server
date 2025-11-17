@@ -4,7 +4,8 @@ import lombok.Builder;
 
 @Builder
 public record LoginResult(
-    String accessToken,
-    UserMini user
+	String username, // 학번
+	String major,    // 학과
+	Integer grade    // 학년
 ) {
 }

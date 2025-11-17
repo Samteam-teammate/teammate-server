@@ -3,8 +3,11 @@ package com.samteam.teammate.domain.member.service;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.samteam.teammate.domain.auth.service.PortalAuthService;
+import com.samteam.teammate.domain.member.dto.MemberRegisterResponse;
 import com.samteam.teammate.domain.member.dto.MemberProfileResponse;
 import com.samteam.teammate.domain.member.dto.MemberProfileUpdateRequest;
+import com.samteam.teammate.domain.member.dto.MemberRegisterRequest;
 import com.samteam.teammate.domain.member.entity.Member;
 import com.samteam.teammate.domain.member.repository.MemberRepository;
 import com.samteam.teammate.domain.profile.entity.Profile;
@@ -20,6 +23,23 @@ public class MemberService {
 
 	private final MemberRepository memberRepository;
 	private final ProfileRepository profileRepository;
+
+	@Transactional
+	public MemberRegisterResponse registerMember(MemberRegisterRequest request) {
+		if (memberRepository.existsByStudentId(request.studentId())) {
+			throw new BusinessException(ErrorCode.MEMBER_ALREADY_EXIST);
+		}
+
+		Member member = Member.builder()
+			.studentId(request.studentId())
+			.build();
+		memberRepository.save(member);
+
+		Profile profile = MemberRegisterRequest.to(request, member);
+		profileRepository.save(profile);
+
+		return MemberRegisterResponse.from(member);
+	}
 
 	@Transactional(readOnly = true)
 	public MemberProfileResponse getProfile(Long memberId) {

@@ -1,13 +1,17 @@
 package com.samteam.teammate.domain.member.controller;
 
+import com.samteam.teammate.domain.auth.service.PortalAuthService;
+import com.samteam.teammate.domain.member.dto.MemberRegisterResponse;
 import com.samteam.teammate.domain.member.dto.MemberProfileResponse;
 import com.samteam.teammate.domain.member.dto.MemberProfileUpdateRequest;
+import com.samteam.teammate.domain.member.dto.MemberRegisterRequest;
 import com.samteam.teammate.global.security.MemberPrincipal;
 import com.samteam.teammate.domain.member.service.MemberService;
 import com.samteam.teammate.global.util.BaseResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -19,6 +23,16 @@ import org.springframework.web.bind.annotation.*;
 public class MemberController {
 
     private final MemberService memberService;
+    private final PortalAuthService portalAuthService;
+
+    @Operation(summary = "사용자 등록 및 프로필 생성")
+    @PostMapping
+    public BaseResponse<MemberRegisterResponse> registerMember(@RequestBody MemberRegisterRequest request, HttpServletResponse response) {
+        MemberRegisterResponse memberRegisterResponse = memberService.registerMember(request);
+        portalAuthService.issueToken(response, memberRegisterResponse.id());
+
+        return BaseResponse.success("회원가입에 성공했습니다", memberRegisterResponse);
+    }
 
     @Operation(summary = "본인 프로필 조회")
     @GetMapping
