@@ -1,14 +1,18 @@
 spring:
+  application:
+    name: TeamMate
+
+  config:
+    import: optional:file:./.env[.properties]
+
   datasource:
     url: jdbc:h2:mem:db_test;MODE=MySQL # H2 메모리 DB (MySQL 모드)
     username: sa
     password:
     driver-class-name: org.h2.Driver
-
   jpa:
     database: h2
     hibernate:
       ddl-auto: create-drop # 테스트 시작 시 테이블 생성, 종료 시 삭제
-
   main:
     allow-bean-definition-overriding: true

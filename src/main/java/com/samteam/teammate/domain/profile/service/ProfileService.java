@@ -8,6 +8,7 @@ import com.samteam.teammate.domain.profile.dto.ProfileResponse;
 import com.samteam.teammate.domain.profile.repository.ProfileRepository;
 import com.samteam.teammate.global.enums.FieldType;
 import com.samteam.teammate.global.enums.Major;
+import com.samteam.teammate.global.enums.TechType;
 
 import lombok.RequiredArgsConstructor;
 
@@ -17,8 +18,8 @@ public class ProfileService {
 
 	private final ProfileRepository profileRepository;
 
-	public Page<ProfileResponse> getVisibleProfiles(Major major, FieldType field, Pageable pageable) {
-		return profileRepository.findAllByVisibilityTrueAndConditions(major, field, pageable)
+	public Page<ProfileResponse> getVisibleProfiles(Major major, TechType stack, FieldType field, Pageable pageable) {
+		return profileRepository.findAllByVisibilityTrueAndConditions(major, stack, field, pageable)
 			.map(ProfileResponse::from);
 	}
 }

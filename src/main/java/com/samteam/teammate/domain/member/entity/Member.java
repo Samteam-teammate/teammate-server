@@ -29,5 +29,4 @@ public class Member extends BaseTimeEntity {
 
 	private Long studentId;
 
-	private String password;
 }

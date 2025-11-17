@@ -26,6 +26,6 @@ spring:
 
 custom:
   jwt:
-    secret-key: ${JWT_SECRET}
-    access-expire-seconds: ${JWT_ACCESS}
-    refresh-expire-seconds: ${JWT_REFRESH}
+    secret-key: ${JWT_SECRET:test123}
+    access-expire-seconds: ${JWT_ACCESS:600000}
+    refresh-expire-seconds: ${JWT_REFRESH:600000}
