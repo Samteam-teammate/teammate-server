@@ -87,7 +87,7 @@ public class AuthService {
 
             if (e.getMessage().contains("Login fail")) {
                 log.warn("Authentication failed for ID: {}", studentId);
-                throw new BusinessException(ErrorCode.AUTH_FAILED);
+                throw new BusinessException(ErrorCode.SJU_AUTH_FAILED);
             }
 
             // 크롤링 특성상 발생하는 통신 장애, 파싱 오류 등을 UPSTREAM_ERROR로 처리

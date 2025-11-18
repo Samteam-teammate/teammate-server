@@ -19,13 +19,13 @@ import java.io.IOException;
 @RequiredArgsConstructor
 public class JWTAuthenticationFilter extends OncePerRequestFilter {
 
-    private final AuthTokenProvider tokenProvider;
+    private final AuthTokenProvider authTokenProvider;
 
     @Override
     protected void doFilterInternal(
         HttpServletRequest request,
         @NonNull HttpServletResponse response,
-        @NonNull FilterChain chain
+        @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
 
         String header = request.getHeader("Authorization");
@@ -34,27 +34,22 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
         if (StringUtils.hasText(header) && header.startsWith(prefix)) {
             String token = header.substring(prefix.length()).trim();
 
-            if (tokenProvider.isValidToken(token)) {
-                if (!tokenProvider.isTemporaryToken(token)) {
-
-                    String subject = tokenProvider.getSubject(token); // memberId as String
+            if (authTokenProvider.isValidToken(token)) {
+                if (!authTokenProvider.isTemporaryToken(token)) {
+                    String subject = authTokenProvider.getSubject(token); // memberId as String
                     Long memberId = Long.parseLong(subject);
 
                     MemberPrincipal principal = new MemberPrincipal(memberId, null);
 
-                    UsernamePasswordAuthenticationToken auth =
-                        new UsernamePasswordAuthenticationToken(
-                            principal,
-                            null,
-                            // 권한이 있으면 넣고, 지금 단계에선 비워둬도 OK
-                            AuthorityUtils.NO_AUTHORITIES
-                        );
-                    auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    SecurityContextHolder.getContext().setAuthentication(auth);
+                    UsernamePasswordAuthenticationToken authentication =
+                        new UsernamePasswordAuthenticationToken(principal, null, AuthorityUtils.NO_AUTHORITIES);
+
+                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
                 }
             }
         }
 
-        chain.doFilter(request, response);
+        filterChain.doFilter(request, response);
     }
 }

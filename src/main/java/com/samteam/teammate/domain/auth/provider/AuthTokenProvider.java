@@ -8,7 +8,6 @@ import javax.crypto.SecretKey;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 
@@ -57,13 +56,12 @@ public class AuthTokenProvider {
                 .parse(token);
             return true;
         } catch (Exception e) {
-            // TODO: 로깅은 여기서 하거나 GlobalExceptionHandler에서
             return false;
         }
     }
 
     public boolean isTemporaryToken(String token) {
-        // TODO: temp token 여부 좀 더 깔끔하게
+        // TODO : temp token 여부 좀 더 깔끔하게
         try {
             System.out.println("valid temp");
             String temp = Jwts.parser()
@@ -75,7 +73,7 @@ public class AuthTokenProvider {
 
             return Objects.equals(temp, "yes");
         } catch (Exception e) {
-            throw new JwtException(e.getMessage());
+            return false;
         }
     }
 

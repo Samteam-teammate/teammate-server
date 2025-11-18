@@ -9,7 +9,6 @@ import com.samteam.teammate.global.security.JWTAuthenticationFilter;
 import com.samteam.teammate.global.security.JwtAuthEntryPoint;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -46,7 +45,6 @@ public class SecurityConfig {
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .exceptionHandling(eh -> eh.authenticationEntryPoint(new JwtAuthEntryPoint()))
             .authorizeHttpRequests(auth -> auth
-				.requestMatchers(HttpMethod.POST, "/api/v1/member").permitAll()
                 .requestMatchers("/api/v1/auth/login", "/swagger-ui/**", "/v3/api-docs/**", "/h2-console/**")
                 .permitAll()
                 .anyRequest().authenticated()
