@@ -3,7 +3,6 @@ package com.samteam.teammate.domain.member.service;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.samteam.teammate.domain.auth.service.PortalAuthService;
 import com.samteam.teammate.domain.member.dto.MemberRegisterResponse;
 import com.samteam.teammate.domain.member.dto.MemberProfileResponse;
 import com.samteam.teammate.domain.member.dto.MemberProfileUpdateRequest;
