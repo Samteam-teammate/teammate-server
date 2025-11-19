@@ -2,6 +2,8 @@ package com.samteam.teammate.global.exception;
 
 import com.samteam.teammate.global.exception.docs.ErrorCode;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -22,6 +24,10 @@ public class GlobalExceptionHandler {
 		return BaseResponse.fail(ErrorCode.INVALID_INPUT);
 	}
 
+	@ExceptionHandler(AccessDeniedException.class)
+	public BaseResponse<?> handleAccessDeniedException(AccessDeniedException e) {
+		return BaseResponse.fail(ErrorCode.FORBIDDEN_ERROR);
+	}
 
     @ExceptionHandler(Exception.class)
     protected BaseResponse<?> handleAllExceptions(Exception e) {

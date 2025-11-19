@@ -14,6 +14,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,6 +29,7 @@ public class MemberController {
     private final AuthService authService;
 
     @Operation(summary = "사용자 등록 및 프로필 생성")
+    @PreAuthorize("hasRole('TEMP')")
     @PostMapping
     public BaseResponse<MemberRegisterResponse> registerMember(
         @Valid @RequestBody MemberRegisterRequest request, HttpServletResponse response) {
@@ -37,20 +40,23 @@ public class MemberController {
     }
 
     @Operation(summary = "본인 프로필 조회")
+    @PreAuthorize("hasRole('USER')")
     @GetMapping
     public BaseResponse<MemberProfileResponse> getProfile(
         @AuthenticationPrincipal MemberPrincipal principal
     ) {
-        return BaseResponse.success("프로필 조회에 성공했습니다", memberService.getProfile(principal.id()));
+        return BaseResponse.success(
+            "프로필 조회에 성공했습니다", memberService.getProfile(Long.valueOf(principal.getUsername())));
     }
 
     @Operation(summary = "본인 프로필 수정")
+    @PreAuthorize("hasRole('USER')")
     @PatchMapping
     public BaseResponse<MemberProfileResponse> updateProfile(
         @RequestBody MemberProfileUpdateRequest request,
         @AuthenticationPrincipal MemberPrincipal principal
     ) {
-        var resp = memberService.updateProfile(principal.id(), request);
-        return BaseResponse.success("프로필 수정에 성공했습니다", resp);
+        MemberProfileResponse response = memberService.updateProfile(Long.valueOf(principal.getUsername()), request);
+        return BaseResponse.success("프로필 수정에 성공했습니다", response);
     }
 }

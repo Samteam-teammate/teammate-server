@@ -3,13 +3,13 @@ package com.samteam.teammate.domain.auth.controller;
 import com.samteam.teammate.domain.auth.dto.AuthLoginRequest;
 import com.samteam.teammate.domain.auth.dto.AuthLoginResponse;
 import com.samteam.teammate.domain.auth.service.AuthService;
+import com.samteam.teammate.global.util.BaseResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -22,12 +22,14 @@ public class AuthController {
 
     @Operation(summary = "로그인")
     @PostMapping("/login")
-    public ResponseEntity<AuthLoginResponse> login(
+    public BaseResponse<AuthLoginResponse> login(
         @Valid @RequestBody AuthLoginRequest request,
         HttpServletResponse response) {
 
         AuthLoginResponse result = authService.login(request.studentId(), request.password(), response);
 
-        return ResponseEntity.ok(result);
+        return BaseResponse.success("로그인에 성공했습니다", result);
     }
+
+    // TODO : 토큰 refresh api
 }

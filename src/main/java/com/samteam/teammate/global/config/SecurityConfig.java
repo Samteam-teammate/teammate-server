@@ -5,7 +5,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import lombok.RequiredArgsConstructor;
-import com.samteam.teammate.global.security.JWTAuthenticationFilter;
+import com.samteam.teammate.global.security.JwtAuthenticationFilter;
 import com.samteam.teammate.global.security.JwtAuthEntryPoint;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -29,11 +29,10 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class SecurityConfig {
 
     private final AuthTokenProvider authTokenProvider;
-
+	private final JwtAuthEntryPoint jwtAuthEntryPoint;
 
     @Bean
 	public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        JWTAuthenticationFilter jwtFilter = new JWTAuthenticationFilter(authTokenProvider);
         http
             .cors(c -> c.configurationSource(
                 corsConfigurationSource()))
@@ -43,13 +42,15 @@ public class SecurityConfig {
                 .addHeaderWriter(new XFrameOptionsHeaderWriter(XFrameOptionsHeaderWriter.XFrameOptionsMode.SAMEORIGIN))
             )
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .exceptionHandling(eh -> eh.authenticationEntryPoint(new JwtAuthEntryPoint()))
+            .exceptionHandling(eh -> eh
+				.authenticationEntryPoint(jwtAuthEntryPoint)
+			)
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/v1/auth/login", "/swagger-ui/**", "/v3/api-docs/**", "/h2-console/**")
                 .permitAll()
                 .anyRequest().authenticated()
             )
-            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(new JwtAuthenticationFilter(authTokenProvider), UsernamePasswordAuthenticationFilter.class);
 
 		return http.build();
 	}

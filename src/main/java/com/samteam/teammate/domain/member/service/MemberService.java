@@ -11,6 +11,7 @@ import com.samteam.teammate.domain.member.entity.Member;
 import com.samteam.teammate.domain.member.repository.MemberRepository;
 import com.samteam.teammate.domain.profile.entity.Profile;
 import com.samteam.teammate.domain.profile.repository.ProfileRepository;
+import com.samteam.teammate.global.enums.MemberRole;
 import com.samteam.teammate.global.exception.BusinessException;
 import com.samteam.teammate.global.exception.docs.ErrorCode;
 
@@ -31,6 +32,7 @@ public class MemberService {
 
 		Member member = Member.builder()
 			.studentId(request.studentId())
+			.role(MemberRole.ROLE_USER)
 			.build();
 		memberRepository.save(member);
 

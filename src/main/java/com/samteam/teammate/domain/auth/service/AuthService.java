@@ -1,11 +1,15 @@
 package com.samteam.teammate.domain.auth.service;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import com.chuseok22.sejongportallogin.core.SejongMemberInfo;
 import com.chuseok22.sejongportallogin.infrastructure.SejongPortalLoginService;
 import com.samteam.teammate.domain.auth.dto.AuthLoginResponse;
 import com.samteam.teammate.domain.auth.provider.AuthTokenProvider;
 import com.samteam.teammate.domain.member.entity.Member;
 import com.samteam.teammate.domain.member.repository.MemberRepository;
+import com.samteam.teammate.global.enums.MemberRole;
 import com.samteam.teammate.global.exception.BusinessException;
 import com.samteam.teammate.global.exception.docs.ErrorCode;
 
@@ -54,8 +58,12 @@ public class AuthService {
     }
 
     public void issueToken(HttpServletResponse response, Long id) {
-        String accessToken = authTokenProvider.createAccessToken(id, "no");
-        String refreshToken = authTokenProvider.createRefreshToken(id, "no");
+        // access token과 refresh token을 모두 발행
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("role", MemberRole.ROLE_USER.name());
+
+        String accessToken = authTokenProvider.createAccessToken(id, claims);
+        String refreshToken = authTokenProvider.createRefreshToken(id, claims);
 
         ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", refreshToken)
             .httpOnly(true)
@@ -65,14 +73,16 @@ public class AuthService {
             .sameSite("None")
             .build();
 
-        // 쿠키 헤더를 수동으로 설정
         response.setHeader("Set-Cookie", refreshCookie.toString());
         response.setHeader("Authorization", "Bearer " + accessToken);
     }
 
     private void issueTemporaryToken(HttpServletResponse response, Long id) {
-        // TODO: temp token 더 깔끔하게 발행
-        String accessToken = authTokenProvider.createAccessToken(id, "yes");
+        // member 생성에 필요한 임시 토큰 발급
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("role", MemberRole.ROLE_TEMP.name());
+
+        String accessToken = authTokenProvider.createAccessToken(id, claims);
         response.setHeader("Authorization", "Bearer " + accessToken);
     }
 
@@ -85,7 +95,7 @@ public class AuthService {
         } catch (RuntimeException e) {
             // 2. 인증/연결 실패 처리 (로그인 실패, 포털 구조 변경, 타임아웃 등)
 
-            if (e.getMessage().contains("Login fail")) {
+            if (e.getMessage().contains("SEJONG_AUTH_DATA_FETCH_ERROR")) {
                 log.warn("Authentication failed for ID: {}", studentId);
                 throw new BusinessException(ErrorCode.SJU_AUTH_FAILED);
             }

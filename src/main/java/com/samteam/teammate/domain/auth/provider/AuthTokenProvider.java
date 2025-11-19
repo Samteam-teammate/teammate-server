@@ -1,13 +1,14 @@
 package com.samteam.teammate.domain.auth.provider;
 
 import java.util.Date;
-import java.util.Objects;
+import java.util.Map;
 
 import javax.crypto.SecretKey;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 
@@ -27,7 +28,7 @@ public class AuthTokenProvider {
         return Keys.hmacShaKeyFor(secret.getBytes());
     }
 
-    private String buildToken(String subject, long expireSeconds, String isTemp) {
+    private String buildToken(String subject, long expireSeconds, Map<String, Object> claims) {
         Date issuedAt = new Date();
         Date expiration = new Date(issuedAt.getTime() + 1000L * expireSeconds);
 
@@ -35,17 +36,17 @@ public class AuthTokenProvider {
             .subject(subject)
             .issuedAt(issuedAt)
             .expiration(expiration)
-            .claim("temp", isTemp)
+            .claims(claims)
             .signWith(secretKey())
             .compact();
     }
 
-    public String createAccessToken(Long id, String isTemp) {
-        return buildToken(String.valueOf(id), jwtAccessExpireSeconds, isTemp);
+    public String createAccessToken(Long id, Map<String, Object> claims) {
+        return buildToken(String.valueOf(id), jwtAccessExpireSeconds, claims);
     }
 
-    public String createRefreshToken(Long id, String isTemp) {
-        return buildToken(String.valueOf(id), jwtRefreshExpireSeconds, isTemp);
+    public String createRefreshToken(Long id, Map<String, Object> claims) {
+        return buildToken(String.valueOf(id), jwtRefreshExpireSeconds, claims);
     }
 
     public boolean isValidToken(String token) {
@@ -60,29 +61,11 @@ public class AuthTokenProvider {
         }
     }
 
-    public boolean isTemporaryToken(String token) {
-        // TODO : temp token 여부 좀 더 깔끔하게
-        try {
-            System.out.println("valid temp");
-            String temp = Jwts.parser()
-                .verifyWith(secretKey())
-                .build()
-                .parseSignedClaims(token)
-                .getPayload()
-                .get("temp", String.class);
-
-            return Objects.equals(temp, "yes");
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    public String getSubject(String token) {
+    public Claims getClaims(String token) {
         return Jwts.parser()
             .verifyWith(secretKey())
             .build()
             .parseSignedClaims(token)
-            .getPayload()
-            .getSubject();
+            .getPayload();
     }
 }

@@ -16,6 +16,9 @@ public enum ErrorCode {
 	UNAUTHORIZED_ERROR(HttpStatus.UNAUTHORIZED, "E401", "사용자 인증에 실패했습니다"),	// 공통 401
     SJU_AUTH_FAILED(HttpStatus.UNAUTHORIZED, "A001", "학번/비밀번호 인증에 실패했습니다"),	// Auth
 
+	// 403 Forbidden
+	FORBIDDEN_ERROR(HttpStatus.FORBIDDEN, "E403", "접근 권한이 없습니다"),	// 공통 403
+
     // 404 Not Found
     MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "M001", "사용자가 존재하지 않습니다"),	// Member
 

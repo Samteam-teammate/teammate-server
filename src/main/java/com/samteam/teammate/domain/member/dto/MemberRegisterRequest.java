@@ -9,9 +9,10 @@ import com.samteam.teammate.global.enums.Major;
 import com.samteam.teammate.global.enums.TechType;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 public record MemberRegisterRequest(
-	@NotBlank Long studentId,
+	@NotNull Long studentId,
 	@NotBlank String name,
 	Major major,
 	Integer grade,
