@@ -1,9 +1,12 @@
 package com.samteam.teammate.domain.member.entity;
 
+import com.samteam.teammate.global.enums.MemberRole;
 import com.samteam.teammate.global.util.BaseTimeEntity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -27,6 +30,11 @@ public class Member extends BaseTimeEntity {
 	@Column(name = "member_id")
 	private Long id;
 
+	@Column(nullable = false)
 	private Long studentId;
+
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false)
+	private MemberRole role;
 
 }

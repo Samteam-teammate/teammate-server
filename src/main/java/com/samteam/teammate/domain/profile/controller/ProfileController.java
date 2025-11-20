@@ -3,6 +3,7 @@ package com.samteam.teammate.domain.profile.controller;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -28,6 +29,7 @@ public class ProfileController {
 	private final ProfileService profileService;
 
 	@Operation(summary = "전체 프로필 조회")
+	@PreAuthorize("hasRole('USER')")
 	@GetMapping()
 	public BaseResponse<Page<ProfileResponse>> getAllVisibleProfiles(
 		@RequestParam(value = "major", required = false) Major major,
