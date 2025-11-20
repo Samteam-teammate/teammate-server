@@ -27,6 +27,10 @@ on:
         required: true
       DB_NAME:
         required: true
+      REDIS_NAME:
+        required: true
+      REDIS_PROT:
+        required: true
       GCP_SERVICE_ACCOUNT_KEY:
         required: true
       GCP_PROJECT_ID:
@@ -83,10 +87,6 @@ jobs:
           # GitHub Actions output으로 내보내기
           echo "instance_name=$INSTANCE_NAME" >> $GITHUB_OUTPUT
           echo "zone=$INSTANCE_ZONE" >> $GITHUB_OUTPUT
-
-          echo "GCE 인스턴스: $INSTANCE_NAME"
-          echo "Zone: $INSTANCE_ZONE"
-
 
   # 2. 태그 및 릴리스 생성 (단순한 파이프라인을 위해 GHCR 사용)
   makeTagAndRelease:
@@ -171,9 +171,7 @@ jobs:
           INSTANCE_NAME=${{ needs.get-instance-info.outputs.instance_name }}
           INSTANCE_ZONE=${{ needs.get-instance-info.outputs.zone }}
           APP_IMAGE_PATH="ghcr.io/${{ needs.buildImageAndPush.outputs.owner_lc }}/${{ needs.buildImageAndPush.outputs.image_name }}"
-          
-          echo "---DEBUG: APP_IMAGE_PATH (GH Actions)='${APP_IMAGE_PATH}'---"
-          
+                    
           echo "${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}" | base64 -d > /tmp/key.json
           gcloud auth activate-service-account --key-file=/tmp/key.json --project=${{ secrets.GCP_PROJECT_ID }}
           
@@ -188,6 +186,8 @@ jobs:
               DB_HOST_RAW=\"${{ secrets.DB_HOST }}\"
               DB_PORT_RAW=\"${{ secrets.DB_PORT }}\"
               DB_NAME_RAW=\"${{ secrets.DB_NAME }}\"
+              REDIS_NAME_RAW=\"${{ secrets.REDIS_NAME }}\"
+              REDIS_PORT_RAW=\"${{ secrets.REDIS_PORT }}\"
           
               sudo mkdir -p /app
               sudo chown -R \$USER:\$USER /app
@@ -203,12 +203,16 @@ jobs:
               fi
           
               sudo docker network create \${NETWORK_NAME_RAW} 2>/dev/null || true
+              
               sudo docker stop \${DB_HOST_RAW} 2>/dev/null || true
               sudo docker rm \${DB_HOST_RAW} 2>/dev/null || true
               sudo docker run -d --name \${DB_HOST_RAW} --restart=always --network \${NETWORK_NAME_RAW} -p \${DB_PORT_RAW}:\${DB_PORT_RAW} -e MYSQL_ROOT_PASSWORD='${{ secrets.DB_ROOT_PASSWORD }}' -e MYSQL_DATABASE='${{ secrets.DB_NAME }}' -v mysql_data:/var/lib/mysql mysql:8.0
               sudo sleep 10
           
-              echo "---APP_IMAGE_TAG=\${APP_NAME_TAG}---"
+              sudo docker stop \${REDIS_NAME_RAW} 2>/dev/null || true
+              sudo docker rm \${REDIS_NAME_RAW} 2>/dev/null || true
+              sudo docker run -d --name \${REDIS_NAME_RAW} --restart=always --network \${NETWORK_NAME_RAW} -p \${REDIS_PORT_RAW}:\${REDIS_PORT_RAW} -v redis_data:/data redis:7.2-alpine redis-server --appendonly yes
+              sudo sleep 10 
           
               sudo docker pull \${APP_NAME_TAG} && \
               sudo docker stop app1 2>/dev/null || true && \
