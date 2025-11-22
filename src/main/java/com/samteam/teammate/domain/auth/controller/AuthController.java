@@ -34,12 +34,17 @@ public class AuthController {
 
     @Operation(summary = "토큰 재발급")
     @GetMapping("/refresh")
-    public BaseResponse<?> refresh(
-        HttpServletRequest request,
-        HttpServletResponse response
-    ) {
+    public BaseResponse<?> refresh(HttpServletRequest request, HttpServletResponse response) {
         authService.reissueToken(request, response);
 
         return BaseResponse.success("토큰 재발급에 성공했습니다");
+    }
+
+    @Operation(summary = "로그아웃", description = "프론트에서 헤더의 Access Token을 삭제해야함")
+    @PostMapping("/logout")
+    public BaseResponse<?> logout(HttpServletRequest request, HttpServletResponse response) {
+        authService.logout(request, response);
+
+        return BaseResponse.success("로그아웃에 성공했습니다");
     }
 }

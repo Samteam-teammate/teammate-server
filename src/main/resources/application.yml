@@ -13,8 +13,8 @@ spring:
 
   data:
     redis:
-      host: ${REDIS_NAME}
-      port: ${REDIS_PORT}
+      host: ${REDIS_NAME:redis}
+      port: ${REDIS_PORT:6379}
 
   jpa:
     database-platform: org.hibernate.dialect.MySQLDialect
