@@ -1,5 +1,6 @@
 package com.samteam.teammate.domain.auth.service;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -13,10 +14,12 @@ import com.samteam.teammate.global.enums.MemberRole;
 import com.samteam.teammate.global.exception.BusinessException;
 import com.samteam.teammate.global.exception.docs.ErrorCode;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +32,7 @@ public class AuthService {
     private final SejongPortalLoginService portal;
     private final AuthTokenProvider authTokenProvider;
     private final MemberRepository memberRepository;
+    private final RedisTemplate<String, String> redisTemplate;
 
     @Transactional(readOnly = true)
     public AuthLoginResponse login(String studentId, String password, HttpServletResponse response) {
@@ -55,6 +59,29 @@ public class AuthService {
             .major(major)
             .grade(grade)
             .build();
+    }
+
+    @Transactional
+    public void reissueToken(HttpServletRequest request, HttpServletResponse response){
+        // refresh token 추출
+        String refreshToken = authTokenProvider.getRefreshToken(request)
+            .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_TOKEN));
+
+        // 유효성 확인
+        if (!authTokenProvider.isValidToken(refreshToken) ||
+            redisTemplate.opsForValue().get(refreshToken) != null) {
+            throw new BusinessException(ErrorCode.INVALID_TOKEN);
+        }
+
+        // 토큰 재발급
+        String memberId = authTokenProvider.getSubject(refreshToken);
+        issueToken(response, Long.valueOf(memberId));
+
+        // 블랙리스트 등록
+        long expire = authTokenProvider.getClaims(refreshToken).getExpiration().getTime();
+        long now = System.currentTimeMillis();
+        long diff = (expire - now) / 1000;
+        redisTemplate.opsForValue().set(refreshToken, "old token", Duration.ofSeconds(diff));
     }
 
     public void issueToken(HttpServletResponse response, Long id) {
