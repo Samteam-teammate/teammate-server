@@ -7,6 +7,7 @@ import com.samteam.teammate.global.util.BaseResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -31,5 +32,19 @@ public class AuthController {
         return BaseResponse.success("로그인에 성공했습니다", result);
     }
 
-    // TODO : 토큰 refresh api
+    @Operation(summary = "토큰 재발급")
+    @GetMapping("/refresh")
+    public BaseResponse<?> refresh(HttpServletRequest request, HttpServletResponse response) {
+        authService.reissueToken(request, response);
+
+        return BaseResponse.success("토큰 재발급에 성공했습니다");
+    }
+
+    @Operation(summary = "로그아웃", description = "프론트에서 헤더의 Access Token을 삭제해야함")
+    @PostMapping("/logout")
+    public BaseResponse<?> logout(HttpServletRequest request, HttpServletResponse response) {
+        authService.logout(request, response);
+
+        return BaseResponse.success("로그아웃에 성공했습니다");
+    }
 }

@@ -11,6 +11,11 @@ spring:
     password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
+  data:
+    redis:
+      host: ${REDIS_NAME:redis}
+      port: ${REDIS_PORT:6379}
+
   jpa:
     database-platform: org.hibernate.dialect.MySQLDialect
     open-in-view: false
