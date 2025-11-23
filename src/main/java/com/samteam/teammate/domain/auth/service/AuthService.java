@@ -1,5 +1,6 @@
 package com.samteam.teammate.domain.auth.service;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -13,10 +14,12 @@ import com.samteam.teammate.global.enums.MemberRole;
 import com.samteam.teammate.global.exception.BusinessException;
 import com.samteam.teammate.global.exception.docs.ErrorCode;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +32,7 @@ public class AuthService {
     private final SejongPortalLoginService portal;
     private final AuthTokenProvider authTokenProvider;
     private final MemberRepository memberRepository;
+    private final RedisTemplate<String, String> redisTemplate;
 
     @Transactional(readOnly = true)
     public AuthLoginResponse login(String studentId, String password, HttpServletResponse response) {
@@ -55,6 +59,34 @@ public class AuthService {
             .major(major)
             .grade(grade)
             .build();
+    }
+
+    @Transactional
+    public void reissueToken(HttpServletRequest request, HttpServletResponse response){
+        // 블랙리스트 등록
+        String refreshToken = blackRefreshToken(request);
+
+        // 토큰 재발급
+        String memberId = authTokenProvider.getSubject(refreshToken);
+        issueToken(response, Long.valueOf(memberId));
+    }
+
+    public void logout(HttpServletRequest request, HttpServletResponse response) {
+        // 블랙리스트 등록
+        blackRefreshToken(request);
+
+        // 쿠키 삭제
+        ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", "")
+            .httpOnly(true)
+            .secure(true)
+            .path("/")
+            .maxAge(0) // 7일
+            .sameSite("None")
+            .build();
+
+        // 헤더 삭제
+        response.setHeader("Set-Cookie", refreshCookie.toString());
+        response.setHeader("Authorization", "");
     }
 
     public void issueToken(HttpServletResponse response, Long id) {
@@ -109,5 +141,25 @@ public class AuthService {
             log.error("Uncaught exception during portal login: ", e);
             throw new BusinessException(ErrorCode.SERVER_ERROR);
         }
+    }
+
+    private String blackRefreshToken(HttpServletRequest request) {
+        // refresh token 추출
+        String refreshToken = authTokenProvider.getRefreshToken(request)
+            .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_TOKEN));
+
+        // 유효성 검사
+        if (!authTokenProvider.isValidToken(refreshToken) ||
+            redisTemplate.opsForValue().get(refreshToken) != null) {
+            throw new BusinessException(ErrorCode.INVALID_TOKEN);
+        }
+
+        // 블랙리스트 등록
+        long expire = authTokenProvider.getClaims(refreshToken).getExpiration().getTime();
+        long now = System.currentTimeMillis();
+        long diff = (expire - now) / 1000;
+        redisTemplate.opsForValue().set(refreshToken, "old token", Duration.ofSeconds(diff));
+
+        return refreshToken;
     }
 }
