@@ -29,7 +29,7 @@ on:
         required: true
       REDIS_NAME:
         required: true
-      REDIS_PROT:
+      REDIS_PORT:
         required: true
       GCP_SERVICE_ACCOUNT_KEY:
         required: true
