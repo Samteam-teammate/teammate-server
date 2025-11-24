@@ -2,6 +2,7 @@ package com.samteam.teammate.global.exception;
 
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import com.samteam.teammate.global.exception.docs.ErrorCode;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 
@@ -27,18 +28,32 @@ public class GlobalExceptionHandler {
     // Bean Validation 실패
     @ExceptionHandler(MethodArgumentNotValidException.class)
     protected BaseResponse<?> handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
+
         var fieldErrors = e.getBindingResult().getFieldErrors().stream()
-            .map(fe -> String.format(
-                "%s=%s (%s)",
-                fe.getField(),
-                fe.getRejectedValue(),
-                fe.getDefaultMessage()
+            .map(fe -> java.util.Map.of(
+                "field", fe.getField(),
+                "rejectedValue", String.valueOf(fe.getRejectedValue()),
+                "reason", Objects.toString(fe.getDefaultMessage(), "")
             ))
             .toList();
 
-        log.warn("MethodArgumentNotValidException: {}", fieldErrors);
+        var logLines = fieldErrors.stream()
+            .map(fe -> String.format(
+                "%s=%s (%s)",
+                fe.get("field"),
+                fe.get("rejectedValue"),
+                fe.get("reason")
+            ))
+            .toList();
 
-        return BaseResponse.fail(ErrorCode.INVALID_INPUT);
+        log.warn("MethodArgumentNotValidException: {}", logLines);
+
+        var detail = java.util.Map.of(
+            "code", ErrorCode.INVALID_INPUT.getCode(),
+            "fields", fieldErrors
+        );
+
+        return BaseResponse.fail(ErrorCode.INVALID_INPUT, detail);
     }
 
     // 필수 파라미터 누락

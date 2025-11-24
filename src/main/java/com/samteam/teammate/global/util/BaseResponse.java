@@ -21,4 +21,8 @@ public record BaseResponse<T>(
 	public static BaseResponse<?> fail(ErrorCode e) {
 		return new BaseResponse<>(e.getStatus(), e.getMessage(), e.getCode());
 	}
+
+    public static <T> BaseResponse<T> fail(ErrorCode e, T detail) {
+        return new BaseResponse<>(e.getStatus(), e.getMessage(), detail);
+    }
 }
