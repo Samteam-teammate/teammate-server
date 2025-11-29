@@ -34,13 +34,13 @@ public class ProfileScrapService {
 
         var already = scrapRepository.findByMemberAndProfile(member, profile);
         if (already.isPresent()) {
-            return ScrapResponse.of(already.get().getId(), true);
+            return ScrapResponse.of(true);
         }
 
         ProfileScrap scrap = ProfileScrap.create(member, profile);
         scrapRepository.save(scrap);
 
-        return ScrapResponse.of(scrap.getId(), true);
+        return ScrapResponse.of(true);
     }
 
     @Transactional
@@ -57,7 +57,7 @@ public class ProfileScrapService {
         Long scrapId = scrap.getId();
         scrapRepository.delete(scrap);
 
-        return ScrapResponse.of(scrapId, false);
+        return ScrapResponse.of(false);
     }
 
     @Transactional(readOnly = true)

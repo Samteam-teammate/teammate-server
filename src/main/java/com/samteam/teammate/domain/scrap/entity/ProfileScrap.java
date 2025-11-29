@@ -44,11 +44,4 @@ public class ProfileScrap extends BaseTimeEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "profile_id")
     private Profile profile;
-
-    public static ProfileScrap create(Member member, Profile profile) {
-        return ProfileScrap.builder()
-            .member(member)
-            .profile(profile)
-            .build();
-    }
 }

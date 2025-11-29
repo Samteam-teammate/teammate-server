@@ -21,10 +21,9 @@ public record ProfileResponse(
 	String contactInfo,
 	String additionalInfo,
 
-    Boolean scraped,
-    Long scrapId
+    Boolean scraped
 ) {
-	public static ProfileResponse of(Profile profile, boolean scraped, Long scrapId) {
+	public static ProfileResponse of(Profile profile, boolean scraped) {
 		return ProfileResponse.builder()
 			.id(profile.getId())
 			.name(profile.getName())
@@ -36,11 +35,10 @@ public record ProfileResponse(
 			.simpleInfo(profile.getSimpleInfo())
 			.additionalInfo(profile.getAdditionalInfo())
             .scraped(scraped)
-            .scrapId(scrapId)
 			.build();
 	}
 
     public static ProfileResponse from(Profile profile) {
-        return of(profile, false, null);
+        return of(profile, false);
     }
 }

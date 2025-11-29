@@ -46,7 +46,7 @@ public class ProfileService {
             boolean scraped = scrapOpt.isPresent();
             Long scrapId = scrapOpt.map(ProfileScrap::getId).orElse(null);
 
-            return ProfileResponse.of(profile, scraped, scrapId);
+            return ProfileResponse.of(profile, scraped);
         });
     }
 }
