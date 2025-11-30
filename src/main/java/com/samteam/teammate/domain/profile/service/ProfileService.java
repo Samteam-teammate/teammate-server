@@ -3,7 +3,6 @@ package com.samteam.teammate.domain.profile.service;
 import com.samteam.teammate.domain.member.entity.Member;
 import com.samteam.teammate.domain.member.repository.MemberRepository;
 import com.samteam.teammate.domain.profile.entity.Profile;
-import com.samteam.teammate.domain.scrap.entity.ProfileScrap;
 import com.samteam.teammate.domain.scrap.repository.ProfileScrapRepository;
 import com.samteam.teammate.global.exception.BusinessException;
 import com.samteam.teammate.global.exception.docs.ErrorCode;
@@ -42,10 +41,7 @@ public class ProfileService {
 
         return profiles.map(profile -> {
             // 로그인한 사용자가 해당 프로필을 스크랩했는지 조회
-            var scrapOpt = profileScrapRepository.findByMemberAndProfile(member, profile);
-            boolean scraped = scrapOpt.isPresent();
-            Long scrapId = scrapOpt.map(ProfileScrap::getId).orElse(null);
-
+            boolean scraped = profileScrapRepository.existsByMemberAndProfile(member, profile);
             return ProfileResponse.of(profile, scraped);
         });
     }

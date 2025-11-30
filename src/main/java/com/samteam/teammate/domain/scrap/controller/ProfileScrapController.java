@@ -1,6 +1,5 @@
 package com.samteam.teammate.domain.scrap.controller;
 
-import com.samteam.teammate.domain.scrap.dto.ScrapResponse;
 import com.samteam.teammate.domain.scrap.dto.ScrapedProfileResponse;
 import com.samteam.teammate.domain.scrap.service.ProfileScrapService;
 import com.samteam.teammate.global.security.MemberPrincipal;
@@ -32,25 +31,25 @@ public class ProfileScrapController {
     @Operation(summary = "프로필 스크랩 등록")
     @PreAuthorize("hasRole('USER')")
     @PostMapping("/profiles/{profileId}/scrap")
-    public BaseResponse<ScrapResponse> scrap(
+    public BaseResponse<?> scrap(
         @PathVariable Long profileId,
         @AuthenticationPrincipal MemberPrincipal principal
     ) {
         Long memberId = Long.valueOf(principal.getUsername());
-        ScrapResponse resp = profileScrapService.scrapProfile(memberId, profileId);
-        return BaseResponse.success("스크랩에 성공했습니다", resp);
+        profileScrapService.scrapProfile(memberId, profileId);
+        return BaseResponse.success("스크랩에 성공했습니다");
     }
 
     @Operation(summary = "프로필 스크랩 취소")
     @PreAuthorize("hasRole('USER')")
     @DeleteMapping("/profiles/{profileId}/scrap")
-    public BaseResponse<ScrapResponse> cancelScrap(
+    public BaseResponse<?> cancelScrap(
         @PathVariable Long profileId,
         @AuthenticationPrincipal MemberPrincipal principal
     ) {
         Long memberId = Long.valueOf(principal.getUsername());
-        ScrapResponse resp = profileScrapService.cancelScrap(memberId, profileId);
-        return BaseResponse.success("스크랩 취소에 성공했습니다", resp);
+        profileScrapService.cancelScrap(memberId, profileId);
+        return BaseResponse.success("스크랩 취소에 성공했습니다");
     }
 
     @Operation(summary = "스크랩한 프로필 목록 조회")

@@ -6,7 +6,7 @@ import jakarta.validation.constraints.NotBlank;
 
 public record AuthLoginRequest(
     @NotBlank
-    String studentId,
+    Long studentId,
 
     @NotBlank
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
