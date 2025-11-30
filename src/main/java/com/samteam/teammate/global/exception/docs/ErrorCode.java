@@ -21,6 +21,8 @@ public enum ErrorCode {
 
     // 404 Not Found
     MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "M001", "사용자가 존재하지 않습니다"),	// Member
+    PROFILE_NOT_FOUND(HttpStatus.NOT_FOUND, "P001", "프로필이 존재하지 않습니다"),
+    SCRAP_NOT_FOUND(HttpStatus.NOT_FOUND, "S001", "스크랩 정보가 존재하지 않습니다"),
 
     // 409 Conflict
     MEMBER_ALREADY_EXIST(HttpStatus.CONFLICT, "M002", "사용자가 이미 존재합니다"), // Member
