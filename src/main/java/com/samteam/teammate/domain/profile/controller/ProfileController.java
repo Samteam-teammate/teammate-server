@@ -1,7 +1,6 @@
 package com.samteam.teammate.domain.profile.controller;
 
-import com.samteam.teammate.domain.scrap.dto.ScrapedProfileResponse;
-import com.samteam.teammate.domain.scrap.service.ProfileScrapService;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;

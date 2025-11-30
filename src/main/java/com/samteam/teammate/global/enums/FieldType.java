@@ -4,6 +4,7 @@ public enum FieldType {
 	PM,
 	FE,
 	BE,
+	AI,
 	VR,
 	DESIGN,
 	ETC
