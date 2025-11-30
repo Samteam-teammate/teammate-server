@@ -19,9 +19,11 @@ public record ProfileResponse(
 	FieldType applicationField,
 	String simpleInfo,
 	String contactInfo,
-	String additionalInfo
+	String additionalInfo,
+
+    Boolean scraped
 ) {
-	public static ProfileResponse from(Profile profile) {
+	public static ProfileResponse of(Profile profile, boolean scraped) {
 		return ProfileResponse.builder()
 			.id(profile.getId())
 			.name(profile.getName())
@@ -32,6 +34,11 @@ public record ProfileResponse(
 			.contactInfo(profile.getContactInfo())
 			.simpleInfo(profile.getSimpleInfo())
 			.additionalInfo(profile.getAdditionalInfo())
+            .scraped(scraped)
 			.build();
 	}
+
+    public static ProfileResponse from(Profile profile) {
+        return of(profile, false);
+    }
 }
