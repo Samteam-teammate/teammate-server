@@ -35,18 +35,18 @@ public class AuthService {
     private final RedisTemplate<String, String> redisTemplate;
 
     @Transactional(readOnly = true)
-    public AuthLoginResponse login(String studentId, String password, HttpServletResponse response) {
-        SejongMemberInfo info = trySejongPortalLogin(studentId, password);
+    public AuthLoginResponse login(Long studentId, String password, HttpServletResponse response) {
+        SejongMemberInfo info = trySejongPortalLogin(String.valueOf(studentId), password);
 
         String major = info.getMajor();
         int grade = Integer.parseInt(info.getGrade().replaceAll("[^0-9]", "")); // 학년만 추출
 
         // 사용자가 존재하지 않으면 예외 처리
-        Member member = memberRepository.findByStudentId(Long.valueOf(studentId))
+        Member member = memberRepository.findByStudentId(studentId)
             .orElseThrow(() -> {
                 // member, profile 생성을 위해 임시 토큰 발급
                 // member 생성 요청시 sju login에 성공했음을 알기 위함
-                issueTemporaryToken(response, Long.valueOf(studentId));
+                issueTemporaryToken(response, studentId);
 				return new BusinessException(ErrorCode.MEMBER_NOT_FOUND);
             });
 
