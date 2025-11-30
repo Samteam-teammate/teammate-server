@@ -2,6 +2,10 @@ package com.samteam.teammate.global.exception;
 
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import com.samteam.teammate.global.exception.docs.ErrorCode;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
@@ -29,7 +33,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     protected BaseResponse<?> handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
 
-        var fieldErrors = e.getBindingResult().getFieldErrors().stream()
+        List<Map<String, String>> fieldErrors = e.getBindingResult().getFieldErrors().stream()
             .map(fe -> java.util.Map.of(
                 "field", fe.getField(),
                 "rejectedValue", String.valueOf(fe.getRejectedValue()),
@@ -37,7 +41,7 @@ public class GlobalExceptionHandler {
             ))
             .toList();
 
-        var logLines = fieldErrors.stream()
+        List<String> logLines = fieldErrors.stream()
             .map(fe -> String.format(
                 "%s=%s (%s)",
                 fe.get("field"),
@@ -48,9 +52,9 @@ public class GlobalExceptionHandler {
 
         log.warn("MethodArgumentNotValidException: {}", logLines);
 
-        var detail = java.util.Map.of(
+        Map<String, Object> detail = Map.of(
             "code", ErrorCode.INVALID_INPUT.getCode(),
-            "fields", fieldErrors
+            "detail", fieldErrors
         );
 
         return BaseResponse.fail(ErrorCode.INVALID_INPUT, detail);
@@ -60,44 +64,49 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MissingServletRequestParameterException.class)
     protected BaseResponse<?> handleMissingServletRequestParameter(MissingServletRequestParameterException e) {
         log.warn("MissingServletRequestParameterException: param={}", e.getParameterName());
-        return BaseResponse.fail(ErrorCode.INVALID_INPUT);
+        Map<String, String> detail = Map.of(
+            "code", ErrorCode.INVALID_INPUT.getCode(),
+            "detail", e.getParameterName() + "is missing"
+        );
+        return BaseResponse.fail(ErrorCode.INVALID_INPUT, detail);
     }
 
     // JSON 파싱/타입 불일치, 쿼리 파라미터 타입 불일치
     @ExceptionHandler({
         HttpMessageNotReadableException.class,
         MethodArgumentTypeMismatchException.class,
-        InvalidFormatException.class // 혹시 직접 던져지는 경우 대비
+        InvalidFormatException.class
     })
     protected BaseResponse<?> handleTypeMismatch(Exception e) {
+        if (e == null) log.warn("Type Mismatch Error is Empty");
 
-        // 1) JSON body 쪽 (주로 HttpMessageNotReadableException → InvalidFormatException)
-        if (e instanceof HttpMessageNotReadableException hmr) {
-            Throwable cause = hmr.getMostSpecificCause();
+        String detail = "Type Mismatch";
 
-            if (cause instanceof InvalidFormatException ife) {
-                logInvalidFormat(ife);
-            } else {
-                log.warn("Unreadable request body: {}", hmr.getMessage());
+		switch (e) {
+            // 1) JSON body 쪽 (주로 HttpMessageNotReadableException → InvalidFormatException)
+			case HttpMessageNotReadableException hmr -> {
+				Throwable cause = hmr.getMostSpecificCause();
+				if (cause instanceof InvalidFormatException ife) {
+					detail = logInvalidFormat(ife);
+				} else {
+					log.warn("Unreadable request body: {}", hmr.getMessage());
+				}
+			}
+
+			// 2) enum 등에서 InvalidFormatException이 직접 잡히는 경우
+			case InvalidFormatException ife -> detail = logInvalidFormat(ife);
+
+			// 3) 쿼리 파라미터, path variable 타입 불일치
+			case MethodArgumentTypeMismatchException matme -> {
+                detail = "param=" + matme.getName() + ", value=" + matme.getValue() + ", requiredType=" + matme.getRequiredType().getSimpleName();
+                log.warn("MethodArgumentTypeMismatchException: " + detail);
             }
-        }
-        // 2) enum 등에서 InvalidFormatException이 직접 잡히는 경우
-        else if (e instanceof InvalidFormatException ife) {
-            logInvalidFormat(ife);
-        }
-        // 3) 쿼리 파라미터, path variable 타입 불일치
-        else if (e instanceof MethodArgumentTypeMismatchException matme) {
-            log.warn("MethodArgumentTypeMismatchException: param={}, value={}, requiredType={}",
-                matme.getName(),
-                matme.getValue(),
-                matme.getRequiredType() != null ? matme.getRequiredType().getSimpleName() : null
-            );
-        } else {
-            log.warn("Type mismatch or unreadable request body: {}", e.getMessage());
-        }
 
-        // 클라이언트 응답은 일단 공통 400으로 통일
-        return BaseResponse.fail(ErrorCode.INVALID_INPUT);
+            case null -> log.warn("Type mismatch or unreadable request body");
+            default -> log.warn("Type mismatch or unreadable request body: {}", e.getMessage());
+		}
+
+        return BaseResponse.fail(ErrorCode.INVALID_INPUT, detail);
     }
 
     @ExceptionHandler(AccessDeniedException.class)
@@ -119,7 +128,7 @@ public class GlobalExceptionHandler {
      * - 어떤 값이
      * - 어떤 타입/enum과 안 맞는지
      */
-    private void logInvalidFormat(InvalidFormatException ife) {
+    private String logInvalidFormat(InvalidFormatException ife) {
         String fieldPath = ife.getPath().stream()
             .map(ref -> {
                 if (ref.getFieldName() != null) {
@@ -134,18 +143,17 @@ public class GlobalExceptionHandler {
         Object invalidValue = ife.getValue();
         Class<?> targetType = ife.getTargetType();
 
+        String logMsg;
+
         if (targetType != null && targetType.isEnum()) {
             Object[] allowed = targetType.getEnumConstants();
-            log.warn(
-                "Invalid enum value: field={}, value={}, allowed={}",
-                fieldPath, invalidValue, allowed
-            );
+            logMsg = "field=" + fieldPath+ " value=" + invalidValue + ", allowed={}" + Arrays.toString(allowed);
+            log.warn("Invalid enum value: " + logMsg);
         } else {
-            log.warn(
-                "Invalid format: field={}, value={}, targetType={}",
-                fieldPath, invalidValue,
-                targetType != null ? targetType.getSimpleName() : null
-            );
+            logMsg = "field=" + fieldPath+ " value=" + invalidValue + ", allowed={}" + (targetType != null ? targetType.getSimpleName() : "");
+            log.warn("Invalid enum value: " + logMsg);
         }
+
+        return logMsg;
     }
 }
