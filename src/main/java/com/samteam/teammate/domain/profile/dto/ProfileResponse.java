@@ -20,7 +20,6 @@ public record ProfileResponse(
 	String simpleInfo,
 	String contactInfo,
 	String additionalInfo,
-
     Boolean scraped
 ) {
 	public static ProfileResponse of(Profile profile, boolean scraped) {
@@ -37,8 +36,4 @@ public record ProfileResponse(
             .scraped(scraped)
 			.build();
 	}
-
-    public static ProfileResponse from(Profile profile) {
-        return of(profile, false);
-    }
 }
