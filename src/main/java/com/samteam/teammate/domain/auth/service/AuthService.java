@@ -55,7 +55,7 @@ public class AuthService {
 
         // 응답 모델 구성
         return AuthLoginResponse.builder()
-            .username(studentId)
+            .studentId(studentId)
             .major(major)
             .grade(grade)
             .build();
